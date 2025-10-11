@@ -1,0 +1,12 @@
+[paths]
+templatesDir = "templates"
+outputRoot = "."
+
+[output]
+targets = ["agents-md", "claude-md"]
+
+[defaults]
+engine = "builtin:simple"
+
+[variables.static]
+project = "imported-merged"

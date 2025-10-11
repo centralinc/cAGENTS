@@ -1,0 +1,21 @@
+[paths]
+templatesDir = "templates"
+outputRoot = "."
+cursorRulesDir = ".cursor/rules"
+
+[defaults]
+engine = "command:python3 .cAGENTS/tools/render.py"
+targets = ["agentsmd","cursor"]
+order = 50
+
+[variables.static]
+owner = "Jordan"
+tone = "concise"
+
+[variables.command]
+branch = "git rev-parse --abbrev-ref HEAD"
+
+[execution]
+shell = "bash"
+timeoutMs = 3000
+allowCommands = true

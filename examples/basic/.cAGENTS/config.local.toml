@@ -1,0 +1,10 @@
+# Local config override (highest priority)
+# This file is typically .gitignored for user-specific settings
+
+[paths]
+templatesDir = "templates"
+outputRoot = "."
+
+[variables.static]
+owner = "LocalOverride"
+localOnly = "This variable only exists in local config"

@@ -1,0 +1,73 @@
+name: Release
+
+on:
+  push:
+    branches:
+      - main
+
+concurrency: ${{ github.workflow }}-${{ github.ref }}
+
+jobs:
+  release:
+    name: Release
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Repo
+        uses: actions/checkout@v4
+        with:
+          # This makes Actions fetch all Git history so that Changesets can generate changelogs with the correct commits
+          fetch-depth: 0
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Install pnpm
+        run: npm i -g pnpm@9
+
+      - name: Install dependencies
+        run: pnpm -w i
+
+      - name: Create Release Pull Request or Publish to npm
+        id: changesets
+        uses: changesets/action@v1
+        with:
+          # This runs "pnpm version" which calls changeset version + sync-versions.js
+          version: pnpm version
+          # This runs "pnpm release" which builds and publishes to npm
+          publish: pnpm release
+          title: "Release: Version Packages"
+          commit: "chore: version packages"
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
+
+      - name: Setup Rust
+        if: steps.changesets.outputs.published == 'true'
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Publish to crates.io
+        if: steps.changesets.outputs.published == 'true'
+        run: |
+          cargo login ${{ secrets.CARGO_TOKEN }}
+          # Publish core first (cli depends on it)
+          cd crates/cagents-core
+          cargo publish --allow-dirty
+          cd ../cagents-cli
+          # Wait for crates.io to index the core crate
+          sleep 30
+          cargo publish --allow-dirty
+        env:
+          CARGO_TOKEN: ${{ secrets.CARGO_TOKEN }}
+
+      - name: Create GitHub Release
+        if: steps.changesets.outputs.published == 'true'
+        run: |
+          # Extract version from published packages
+          VERSION=$(cat packages/cagents/package.json | jq -r '.version')
+          gh release create "v${VERSION}" \
+            --title "v${VERSION}" \
+            --notes "See [CHANGELOG.md](./CHANGELOG.md) for details."
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

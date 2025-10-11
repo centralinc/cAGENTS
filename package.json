@@ -1,0 +1,29 @@
+{
+  "name": "cAGENTS",
+  "private": true,
+  "version": "0.1.0",
+  "description": "cAGENTS - collected, composed, and compiled AGENTS.md",
+  "repository": {
+    "url": "https://github.com/centralinc/cAGENTS.git"
+  },
+  "bugs": {
+    "url": "https://github.com/centralinc/cAGENTS.git/issues"
+  },
+  "homepage": "https://github.com/centralinc/cAGENTS#readme",
+  "author": "jordan@central.inc",
+  "workspaces": [
+    "packages/*"
+  ],
+  "scripts": {
+    "build": "pnpm -r run build",
+    "fmt": "pnpm -r run fmt",
+    "changeset": "changeset",
+    "version": "changeset version && node scripts/sync-versions.js",
+    "release": "pnpm build && changeset publish"
+  },
+  "devDependencies": {
+    "@changesets/cli": "^2.29.7",
+    "cagents": "workspace:*",
+    "handlebars": "^4.7.8"
+  }
+}

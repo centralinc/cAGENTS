@@ -1,0 +1,10 @@
+/target
+/node_modules
+/dist
+/.turbo
+/.cursor
+.DS_Store
+
+# cAGENTS generated files
+AGENTS.md
+**/AGENTS.md

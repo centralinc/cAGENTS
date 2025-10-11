@@ -1,0 +1,17 @@
+[package]
+name = "cagents"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+anyhow = "1"
+clap = { version = "4", features = ["derive"] }
+cagents-core = { path = "../cagents-core" }
+
+[dev-dependencies]
+assert_cmd = "2"
+assert_fs = "1"
+predicates = "3"
+tempfile = "3"
+insta = { version = "1", features = ["yaml"] }
+serde_json = "1"

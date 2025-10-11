@@ -1,0 +1,6 @@
+[workspace]
+members = [
+  "crates/cagents-core",
+  "crates/cagents-cli"
+]
+resolver = "2"

@@ -81,12 +81,95 @@ pub struct RuleFrontmatter {
 }
 
 #[derive(Debug, Clone, Deserialize, Serialize)]
-#[serde(deny_unknown_fields)]
 pub struct When {
+    // Legacy fields for backward compatibility
     pub env: Option<Vec<String>>,
     pub role: Option<Vec<String>>,
     pub language: Option<Vec<String>>,
     pub target: Option<Vec<String>>,
+
+    // Arbitrary variables (all other fields)
+    #[serde(flatten)]
+    pub variables: std::collections::HashMap<String, serde_json::Value>,
+}
+
+impl When {
+    /// Create a When clause from legacy fields only (for backward compatibility and tests)
+    pub fn legacy(
+        env: Option<Vec<String>>,
+        role: Option<Vec<String>>,
+        language: Option<Vec<String>>,
+        target: Option<Vec<String>>,
+    ) -> Self {
+        Self {
+            env,
+            role,
+            language,
+            target,
+            variables: std::collections::HashMap::new(),
+        }
+    }
+
+    /// Create a When clause from arbitrary variables
+    pub fn from_variables(vars: std::collections::HashMap<String, Vec<String>>) -> Self {
+        let mut variables = std::collections::HashMap::new();
+        for (key, values) in vars {
+            variables.insert(key, serde_json::Value::Array(
+                values.into_iter().map(serde_json::Value::String).collect()
+            ));
+        }
+
+        Self {
+            env: None,
+            role: None,
+            language: None,
+            target: None,
+            variables,
+        }
+    }
+
+    /// Get all variable requirements as a unified view
+    /// This merges legacy fields (env, role, language, target) with arbitrary variables
+    pub fn all_variables(&self) -> std::collections::HashMap<String, Vec<String>> {
+        let mut result = std::collections::HashMap::new();
+
+        // Add legacy fields if present
+        if let Some(env) = &self.env {
+            result.insert("env".to_string(), env.clone());
+        }
+        if let Some(role) = &self.role {
+            result.insert("role".to_string(), role.clone());
+        }
+        if let Some(language) = &self.language {
+            result.insert("language".to_string(), language.clone());
+        }
+        if let Some(target) = &self.target {
+            result.insert("target".to_string(), target.clone());
+        }
+
+        // Add arbitrary variables
+        for (key, value) in &self.variables {
+            // Skip legacy fields to avoid duplicates
+            if key == "env" || key == "role" || key == "language" || key == "target" {
+                continue;
+            }
+
+            // Convert JSON value to Vec<String>
+            if let Some(arr) = value.as_array() {
+                let strings: Vec<String> = arr.iter()
+                    .filter_map(|v| v.as_str().map(|s| s.to_string()))
+                    .collect();
+                if !strings.is_empty() {
+                    result.insert(key.clone(), strings);
+                }
+            } else if let Some(s) = value.as_str() {
+                // Single string value
+                result.insert(key.clone(), vec![s.to_string()]);
+            }
+        }
+
+        result
+    }
 }
 
 #[derive(Debug, Clone, Deserialize, Serialize)]

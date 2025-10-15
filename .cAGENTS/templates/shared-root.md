@@ -2,8 +2,6 @@
 name: shared-root
 description: shared sections
 alwaysApply: true
-when:
-  target: ["claude-md", "agents-md"]
 order: 20
 ---
 

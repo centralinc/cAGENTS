@@ -1,7 +1,6 @@
 ---
 name: claudemd-intro
 description: CLAUDE.md
-alwaysApply: true
 when:
   target: ["claude-md"]
 order: 10

@@ -1,7 +1,6 @@
 ---
 name: agentsmd-intro
 description: AGENTS.md
-alwaysApply: true
 when:
   target: ["agents-md"]
 order: 10

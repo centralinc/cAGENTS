@@ -1,5 +1,12 @@
-# Testing Guide
-
+---
+name: rust-tests
+description: Testing Guide for rust tests
+globs:
+  - crates/**/tests/
+simplifyGlobsToParent: false
+alwaysApply: true
+order: 30
+---
 ## Running Tests
 
 ### Run all tests

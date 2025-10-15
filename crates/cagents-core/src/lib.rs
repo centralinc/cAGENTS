@@ -280,35 +280,37 @@ pub fn cmd_build(
     let base_dir = PathBuf::from(".cAGENTS");
     let all_rules = loader::discover_rules(&config, &base_dir)?;
 
-    // 3. Build context from CLI args (no interactive prompts)
-    // Use provided flags or None - don't prompt for missing values
-    let context = planner::BuildContext::new(env, role, language);
+    // 3. Build template data from config variables first
+    let base_data = build_template_data_map(&config);
 
-    // 4. Plan outputs (group rules by target directories)
+    // 4. Build context by merging CLI args with config variables
+    // This allows both legacy CLI flags and new config-based variables to work
+    let mut context_variables = std::collections::HashMap::new();
+
+    // Add config variables to context (for use in when clauses)
+    for (key, value) in &base_data {
+        if let Some(s) = value.as_str() {
+            context_variables.insert(key.clone(), s.to_string());
+        }
+    }
+
+    // CLI args override config variables (for backward compatibility)
+    if let Some(env_val) = &env {
+        context_variables.insert("env".to_string(), env_val.clone());
+    }
+    if let Some(role_val) = &role {
+        context_variables.insert("role".to_string(), role_val.clone());
+    }
+    if let Some(language_val) = &language {
+        context_variables.insert("language".to_string(), language_val.clone());
+    }
+
+    // Create context from merged variables
+    let context = planner::BuildContext::from_variables(context_variables);
+
+    // 5. Plan outputs (group rules by target directories)
     let project_root = PathBuf::from(&config.paths.output_root);
     let outputs = planner::plan_outputs(&all_rules, &context, &project_root)?;
-
-    // 5. Build template data from config variables and context
-    let mut base_data = build_template_data_map(&config);
-
-    if let Some(env_value) = &context.env {
-        base_data.insert(
-            "env".to_string(),
-            serde_json::Value::String(env_value.clone()),
-        );
-    }
-    if let Some(role_value) = &context.role {
-        base_data.insert(
-            "role".to_string(),
-            serde_json::Value::String(role_value.clone()),
-        );
-    }
-    if let Some(language_value) = &context.language {
-        base_data.insert(
-            "language".to_string(),
-            serde_json::Value::String(language_value.clone()),
-        );
-    }
 
     let defaults = config.defaults.as_ref();
 

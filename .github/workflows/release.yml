@@ -54,10 +54,10 @@ jobs:
         id: changesets
         uses: changesets/action@v1
         with:
-          # This runs "pnpm version" which calls changeset version + sync-versions.js
-          version: pnpm version
-          # This runs "pnpm release" which builds and publishes to npm
-          publish: pnpm release
+          # This runs "pnpm run version" which calls changeset version + sync-versions.js
+          version: pnpm run version
+          # This runs "pnpm run release" which builds and publishes to npm
+          publish: pnpm run release
           title: "Release: Version Packages"
           commit: "chore: version packages"
           setupGitUser: true

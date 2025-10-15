@@ -392,13 +392,21 @@ This creates `apps/web/AGENTS.md` with just the rules that match `apps/web/**`.
 
 **Cloud coding agent rules:**
 
-Add extra context when running in Codex Cloud or other cloud coding environments:
+Add extra context based on environment variables:
+
+```toml
+# In .cAGENTS/config.toml
+[variables.command]
+app_env = "echo $APP_ENV"      # Read from environment
+region = "echo $AWS_REGION"
+```
 
 ```yaml
 ---
 name: cloud-agent-context
 when:
-  env: ["codex-cloud"]
+  app_env: ["production", "staging"]    # Only apply when APP_ENV matches
+  region: ["us-west-2"]                 # And region matches
 ---
 # Cloud Agent Context
 
@@ -408,13 +416,11 @@ Architecture diagrams: https://wiki.example.com/architecture
 ...
 ```
 
-Then in your cloud agent's startup script:
-```bash
-export CODE_CLOUD=1
-cagents build --env codex-cloud
-```
+Now the template only applies when your environment variables match the conditions. The `when` clause supports:
+- **Legacy fields:** `env`, `role`, `language`, `target` (still supported via CLI flags)
+- **Arbitrary variables:** Any variable defined in config can be used in `when` conditionals
 
-Now cloud agents get additional context that might not be relevant for local development.
+**Note:** Rules with no `when` clause apply everywhere. This is the recommended approach for base guidelines.
 
 **Multiple output formats:**
 

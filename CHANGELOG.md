@@ -13,7 +13,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - **Behavior:** Rules are now filtered only by context (`when` clause) and file matching (globs). If a rule has no `when` clause, it applies in all contexts, but still respects glob patterns for file matching.
 
 ### Added
-- Support for arbitrary variables in `when` clauses (complements the removal of `alwaysApply`)
+- **Arbitrary variables in `when` clauses:** You can now use any variable from config in conditional rules, not just the legacy `env`/`role`/`language` fields
+  - Define variables in config: `[variables.command] app_env = "echo $APP_ENV"`
+  - Use in when clauses: `when: { app_env: ["production", "staging"] }`
+  - Legacy CLI flags (`--env`, `--role`, `--language`) still work but are now optional
+  - Config variables are evaluated and available in `when` conditionals
+  - Migration: Start using config variables instead of CLI flags for more flexibility
 
 ### Fixed
 - Output files (CLAUDE.md, .cursorrules) are now properly cleaned up when removed from `[output] targets` config

@@ -1,18 +1,15 @@
 ---
-name: agents-from-claudemd
-description: Imported from CLAUDE.md
+name: shared-root
+description: shared sections
 alwaysApply: true
 when:
-  target: ["claude-md"]
+  target: ["claude-md", "agents-md"]
 order: 20
 ---
-# CLAUDE.md
-
-This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
 ## Project Overview
 
-**.cAGENTS** is a cross-platform generator for `AGENTS.md` and compatible rule formats (e.g., Cursor `.mdc`). It composes rule files (Markdown + YAML front-matter), renders them with a BYOC (Bring-Your-Own-Compiler) engine, and writes context-scoped outputs at the repo root and nested directories.
+**cAGENTS** is a cross-platform generator for `AGENTS.md` and compatible rule formats (e.g., Cursor `.mdc`). It composes rule files (Markdown + YAML front-matter), renders them with a BYOC (Bring-Your-Own-Compiler) engine, and writes context-scoped outputs at the repo root and nested directories.
 
 This is a hybrid monorepo with:
 - **Rust workspace** (`crates/`) - The fast, deterministic core
@@ -73,19 +70,20 @@ If you still see interactive prompts during tests, run with:
 CAGENTS_TEST=1 cargo test --workspace
 ```
 
-## CLI Commands
+## Architecture Overview
 
-The CLI provides these subcommands (note: currently stubs, see implementation in `crates/cagents-core/src/lib.rs`):
+### Repository Structure
 
-```bash
-cagents init --preset=mdc
-cagents build --env=cloud --role=backend [--out .]
-cagents export --target cursor
-cagents lint
-cagents explain <path>
+```
+crates/
+  cagents-core/     - Library (planning, renderers, writers)
+  cagents-cli/      - CLI binary entry point
+packages/
+  cagents/          - pnpm wrapper (downloads binary in releases)
+docs/               - PRD, architecture, config, CLI, compiler protocol, roadmap
+examples/           - Runnable samples
 ```
 
-## Architecture Overview
 
 ### Core (Rust) - `crates/cagents-core/`
 
@@ -164,22 +162,8 @@ See `docs/COMPILERS.md` and `crates/cagents-core/src/adapters/command.rs`.
 
 ### Task Tracking Requirement
 
-**You MUST use TodoWrite for ALL work:**
+Track work with Beads instead of Markdown. Run \`bd quickstart\` to see how.
 
-1. **Start of work:** Create todo list with all slices
-2. **During work:** Update status (in_progress → completed)
-3. **After each slice:** Mark completed and move to next
-4. **Before commits:** Ensure todos reflect actual work
-
-**Example:**
-```javascript
-TodoWrite([
-  {content: "Write failing test for feature X", status: "in_progress"},
-  {content: "Implement feature X", status: "pending"},
-  {content: "Verify all tests pass", status: "pending"},
-  {content: "Commit changes", status: "pending"}
-])
-```
 
 ### Test Locations
 
@@ -240,25 +224,11 @@ git commit -m "Add new_feature with tests"
 
 ### Non-Negotiable Rules
 
-1. **No implementation without tests**
-2. **No commits without running full test suite**
-3. **No version bumps without CHANGELOG update**
-4. **No work without TodoWrite tracking**
+1. **Work must include tests**
+2. **run full test suite before considering a task compete**
+3. **Include a CHANGELOG update for all work**
+4. **Work must be tracked with Beads**
 5. **TDD always: test first, code second**
+6. **Update relevant docs and README.md for consumers**
 
 Violating these rules will result in technical debt and bugs.
-
-## Repository Structure
-
-```
-crates/
-  cagents-core/     - Library (planning, renderers, writers)
-  cagents-cli/      - CLI binary entry point
-packages/
-  cagents/          - pnpm wrapper (downloads binary in releases)
-docs/               - PRD, architecture, config, CLI, compiler protocol, roadmap
-examples/           - Runnable samples
-```
-
-## Tasks and planning
-We track work in Beads instead of Markdown. Run \`bd quickstart\` to see how.

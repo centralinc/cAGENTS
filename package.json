@@ -15,7 +15,7 @@
     "packages/*"
   ],
   "scripts": {
-    "build": "pnpm -r run build",
+    "build": "node scripts/build-binary.js && pnpm -r run build",
     "fmt": "pnpm -r run fmt",
     "changeset": "changeset",
     "version": "changeset version && node scripts/sync-versions.js",

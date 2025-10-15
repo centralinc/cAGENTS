@@ -151,12 +151,12 @@ pub fn init_basic(info: &ProjectInfo, force: bool, _backup: bool) -> Result<()> 
     use owo_colors::OwoColorize;
 
     println!("✓ cAGENTS initialized!");
-    println!("");
+    println!();
     println!("Created:");
     println!("  .cAGENTS/config.toml");
     println!("  .cAGENTS/templates/ (empty)");
     println!("  .cAGENTS/.gitignore");
-    println!("");
+    println!();
     println!("Next steps:");
     println!("  1. Create templates in .cAGENTS/templates/");
     println!("  2. Or migrate existing rules: {}", "cagents migrate".bright_white());
@@ -236,14 +236,12 @@ fn find_all_agents_md() -> Vec<PathBuf> {
         })
         .build();
 
-    for result in walker {
-        if let Ok(entry) = result {
-            if entry.file_type().map(|ft| ft.is_file()).unwrap_or(false)
-                && entry.file_name() == "AGENTS.md"
-            {
-                if let Ok(rel_path) = entry.path().strip_prefix(".") {
-                    locations.push(rel_path.to_path_buf());
-                }
+    for entry in walker.flatten() {
+        if entry.file_type().map(|ft| ft.is_file()).unwrap_or(false)
+            && entry.file_name() == "AGENTS.md"
+        {
+            if let Ok(rel_path) = entry.path().strip_prefix(".") {
+                locations.push(rel_path.to_path_buf());
             }
         }
     }

@@ -20,7 +20,9 @@ print(json.dumps({"content": template}))
         )
 
         .unwrap();
-    format!("python3 {}", script.path().display())
+    // Quote path and use forward slashes for cross-platform compatibility
+    let path = script.path().display().to_string().replace('\\', "/");
+    format!("python3 \"{}\"", path)
 }
 
 #[test]
@@ -46,8 +48,9 @@ owner = "Jordan"
 
     // Write template
     let template = temp.child(".cAGENTS/templates/project.md");
+    // Use single quotes in YAML to avoid escaping double quotes
     template.write_str(&format!(
-        "---\nname: project\nengine: \"command:{}\"\nalwaysApply: true\norder: 1\n---\n# {{{{project}}}}\nOwner: {{{{owner}}}}\n",
+        "---\nname: project\nengine: 'command:{}'\nalwaysApply: true\norder: 1\n---\n# {{{{project}}}}\nOwner: {{{{owner}}}}\n",
         command
     ))?;
 

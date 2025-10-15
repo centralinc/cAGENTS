@@ -17,7 +17,9 @@ print(json.dumps({"content": f"path={path}"}))
         )
         .unwrap();
 
-    let command = format!("python3 {}", script.path().display());
+    // Quote path and use forward slashes for cross-platform compatibility
+    let path = script.path().display().to_string().replace('\\', "/");
+    let command = format!("python3 \"{}\"", path);
     let output = render_external(&command, "template", &json!({}), &json!({}), "templates/rule.md").unwrap();
     assert_eq!(output, "path=templates/rule.md");
 }
@@ -30,7 +32,9 @@ fn test_render_external_invalid_json_is_error() {
         .write_str("printf 'not-json'\n")
         .unwrap();
 
-    let command = format!("sh {}", script.path().display());
+    // Quote path and use forward slashes for cross-platform compatibility
+    let path = script.path().display().to_string().replace('\\', "/");
+    let command = format!("sh \"{}\"", path);
     let err = render_external(&command, "", &json!({}), &json!({}), "rule.md").unwrap_err();
     let msg = err.to_string();
     assert!(msg.contains("Failed to parse compiler output") || msg.contains("External compiler failed"));

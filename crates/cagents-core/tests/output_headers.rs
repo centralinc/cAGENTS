@@ -2,7 +2,6 @@
 
 use serial_test::serial;
 use std::fs;
-use std::path::PathBuf;
 use tempfile::TempDir;
 use std::env;
 

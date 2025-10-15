@@ -295,7 +295,7 @@ fn test_scenario_all_filters_combined() {
         Some("backend".to_string()),
         Some("Rust".to_string())
     );
-    let outputs_match = plan_outputs(&[rule.clone()], &context_match, &PathBuf::from(".")).unwrap();
+    let outputs_match = plan_outputs(std::slice::from_ref(&rule), &context_match, &PathBuf::from(".")).unwrap();
     assert_eq!(outputs_match.get(&PathBuf::from(".")).unwrap().len(), 1);
 
     // One mismatch - plan_outputs still includes the rule
@@ -304,7 +304,7 @@ fn test_scenario_all_filters_combined() {
         Some("backend".to_string()),
         Some("Rust".to_string())
     );
-    let outputs_nomatch = plan_outputs(&[rule.clone()], &context_nomatch, &PathBuf::from(".")).unwrap();
+    let outputs_nomatch = plan_outputs(std::slice::from_ref(&rule), &context_nomatch, &PathBuf::from(".")).unwrap();
     // plan_outputs includes the rule; when filtering happens in build
     assert!(outputs_nomatch.contains_key(&PathBuf::from(".")), "plan_outputs includes all rules");
 

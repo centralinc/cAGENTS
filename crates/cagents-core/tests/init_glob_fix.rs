@@ -66,11 +66,9 @@ print(json.dumps({"content": template}))
         }
     }
     println!("\n=== Files created ===");
-    for entry in walkdir::WalkDir::new(".").max_depth(4) {
-        if let Ok(e) = entry {
-            if e.file_name() == "AGENTS.md" {
-                println!("  {}", e.path().display());
-            }
+    for e in walkdir::WalkDir::new(".").max_depth(4).into_iter().flatten() {
+        if e.file_name() == "AGENTS.md" {
+            println!("  {}", e.path().display());
         }
     }
     println!("====================\n");

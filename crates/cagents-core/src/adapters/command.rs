@@ -59,6 +59,9 @@ pub fn render_external(
     // Write input to stdin
     if let Some(mut stdin) = child.stdin.take() {
         stdin.write_all(input_json.as_bytes())?;
+        stdin.flush()?;
+        // Explicitly drop stdin to close the pipe before waiting
+        drop(stdin);
     }
 
     // Wait for output
@@ -91,8 +94,9 @@ mod tests {
 
     #[test]
     fn test_render_external_echo() {
-        // Simple test using printf to return JSON (more reliable than echo)
-        let command = r#"printf '{"content": "Hello from external"}'"#;
+        // Test using a command that reads from stdin and transforms it
+        // This simulates a real external compiler that processes the input
+        let command = r#"cat > /dev/null && printf '{"content": "Hello from external"}'"#;
         let data = json!({});
         let frontmatter = json!({});
 

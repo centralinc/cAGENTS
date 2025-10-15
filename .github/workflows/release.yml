@@ -11,6 +11,10 @@ jobs:
   release:
     name: Release
     runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      pull-requests: write
+      issues: write
     steps:
       - name: Checkout Repo
         uses: actions/checkout@v4
@@ -22,9 +26,26 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: 20
+          cache: 'npm'
 
-      - name: Install pnpm
-        run: npm i -g pnpm@9
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v2
+        with:
+          version: 9
+
+      # Cache pnpm dependencies
+      - name: Get pnpm store directory
+        shell: bash
+        run: |
+          echo "STORE_PATH=$(pnpm store path --silent)" >> $GITHUB_ENV
+
+      - uses: actions/cache@v3
+        name: Setup pnpm cache
+        with:
+          path: ${{ env.STORE_PATH }}
+          key: ${{ runner.os }}-pnpm-store-${{ hashFiles('**/pnpm-lock.yaml') }}
+          restore-keys: |
+            ${{ runner.os }}-pnpm-store-
 
       - name: Install dependencies
         run: pnpm -w i
@@ -39,6 +60,8 @@ jobs:
           publish: pnpm release
           title: "Release: Version Packages"
           commit: "chore: version packages"
+          setupGitUser: true
+          createGithubReleases: true
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
@@ -46,6 +69,12 @@ jobs:
       - name: Setup Rust
         if: steps.changesets.outputs.published == 'true'
         uses: dtolnay/rust-toolchain@stable
+
+      # Cache Rust dependencies for faster builds
+      - uses: Swatinem/rust-cache@v2
+        if: steps.changesets.outputs.published == 'true'
+        with:
+          cache-on-failure: true
 
       - name: Publish to crates.io
         if: steps.changesets.outputs.published == 'true'

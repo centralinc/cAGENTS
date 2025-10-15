@@ -25,6 +25,12 @@ pub struct LintResult {
     pub issues: Vec<LintIssue>,
 }
 
+impl Default for LintResult {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl LintResult {
     pub fn new() -> Self {
         Self { issues: Vec::new() }

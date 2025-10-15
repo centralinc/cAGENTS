@@ -18,9 +18,11 @@ jobs:
         with:
           components: rustfmt, clippy
       - name: Build Rust workspace
-        run: cargo build --workspace --locked
+        run: cargo build --workspace --locked --all-targets
+      - name: Run tests
+        run: cargo test --workspace --locked -- --nocapture
       - name: Run clippy
-        run: cargo clippy --workspace --all-targets -- -D warnings
+        run: cargo clippy --workspace --all-targets --locked -- -D warnings
       - name: Set up Node
         uses: actions/setup-node@v4
         with:

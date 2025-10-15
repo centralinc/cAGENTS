@@ -111,7 +111,7 @@ pub fn filter_rules_for_root(rules: &[Rule], _context: &BuildContext) -> Result<
 /// A rule applies if:
 /// - alwaysApply is true, OR
 /// - The file matches one of the rule's glob patterns
-/// Additionally, rules are filtered by context (when clause)
+///   Additionally, rules are filtered by context (when clause)
 pub fn filter_rules_for_file(
     rules: &[Rule],
     file_path: &Path,

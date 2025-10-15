@@ -16,7 +16,7 @@ pub fn ignore_outputs() -> Result<()> {
         .as_ref()
         .and_then(|c| c.output.as_ref())
         .and_then(|o| o.targets.as_ref())
-        .map(|t| t.clone())
+        .cloned()
         .unwrap_or_else(|| vec!["agents-md".to_string()]);
 
     // Build patterns based on configured outputs

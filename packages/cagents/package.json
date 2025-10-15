@@ -1,8 +1,10 @@
 {
   "name": "cagents",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "Node wrapper for the cAGENTS CLI - AGENTS.md generator",
-  "bin": { "cagents": "bin/cagents.js" },
+  "bin": {
+    "cagents": "bin/cagents.js"
+  },
   "types": "dist/index.d.ts",
   "main": "dist/index.js",
   "scripts": {
@@ -11,13 +13,31 @@
     "prepare": "npm run build",
     "fmt": "echo 'formatting placeholder'"
   },
-  "engines": { "node": ">=18" },
-  "files": ["dist", "bin", "README.md"],
+  "engines": {
+    "node": ">=18"
+  },
+  "files": [
+    "dist",
+    "bin",
+    "README.md"
+  ],
   "devDependencies": {
     "typescript": "^5.5",
     "@types/node": "^20"
   },
-  "keywords": ["agents", "ai", "cursor", "rules", "code-generation", "templates", "handlebars", "liquid", "tera", "markdown", "generators"],
+  "keywords": [
+    "agents",
+    "ai",
+    "cursor",
+    "rules",
+    "code-generation",
+    "templates",
+    "handlebars",
+    "liquid",
+    "tera",
+    "markdown",
+    "generators"
+  ],
   "license": "MIT",
   "repository": {
     "type": "git",

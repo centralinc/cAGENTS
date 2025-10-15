@@ -6,8 +6,11 @@
 # Helps keep code maintainable
 cognitive-complexity-threshold = 30
 
-# Warn about missing documentation in public items
-missing-docs-in-public-items = false
+# Allow expect() in tests for clearer error messages
+allow-expect-in-tests = true
+
+# Allow dbg!() macro in tests for debugging
+allow-dbg-in-tests = true
 
 # Pedantic lints that help with cross-platform code
 # These catch common mistakes that can break on different platforms

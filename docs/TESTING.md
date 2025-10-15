@@ -72,6 +72,21 @@ Clippy is configured in [`.clippy.toml`](../.clippy.toml) to catch common issues
 
 **Fix**: Use `test_utils::path_to_command()` or related utilities
 
+### Windows Path Length Limits
+
+**Symptoms**: Tests fail on Windows with deeply nested directories
+
+**Cause**: Windows has a 260 character path limit (MAX_PATH) by default
+
+**Fix**: Use `cfg!(windows)` to reduce nesting depth on Windows:
+```rust
+let deep_path = if cfg!(windows) {
+    "a/b/c/d/e/f/g/h/i/j"  // 10 levels
+} else {
+    "a/b/c/d/e/f/g/h/i/j/k/l/m/n/o/p/q/r/s/t"  // 20 levels
+};
+```
+
 ### Serial Test Ordering
 
 Some tests use `#[serial]` from the `serial_test` crate because they:

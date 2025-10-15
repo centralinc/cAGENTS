@@ -1,0 +1,10 @@
+{
+  "directories": [
+    "src",
+    "tests",
+    "."
+  ],
+  "targets": [
+    "agents-md"
+  ]
+}

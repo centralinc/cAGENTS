@@ -3,7 +3,7 @@ name: ts-basics
 description: TypeScript guidance
 globs: ["**/*.ts","packages/frontend/**"]
 order: 10
-targets: ["agentsmd","cursor"]
+targets: ["agents-md","cursor"]
 ---
 ## TypeScript
 

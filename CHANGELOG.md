@@ -19,6 +19,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Legacy CLI flags (`--env`, `--role`, `--language`) still work but are now optional
   - Config variables are evaluated and available in `when` conditionals
   - Migration: Start using config variables instead of CLI flags for more flexibility
+- **New `outputIn` field for glob output control:** More intuitive control over where AGENTS.md files are created
+  - `outputIn: matched` - Create output IN matched directories (for dir globs with trailing slash)
+  - `outputIn: parent` - Create in parent of matched files (one per directory)
+  - `outputIn: common-parent` - Find common parent, create single output there
+  - Backward compatible: `simplifyGlobsToParent` still works (maps to outputIn values)
+  - Directory glob support: Patterns ending with `/` now match directories
+- **cAGENTS usage footer:** All generated files now include a footer with best practices
+  - Explains `cagents build` and `cagents context` workflow
+  - Helps AI agents work more efficiently with cAGENTS-managed codebases
 
 ### Fixed
 - Output files (CLAUDE.md, .cursorrules) are now properly cleaned up when removed from `[output] targets` config

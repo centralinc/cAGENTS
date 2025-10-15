@@ -198,15 +198,28 @@ pub fn plan_outputs(
 
         // Note: when clause filtering (including target) is done later per-target output
 
-        // Check if we should simplify to common parent
-        let simplify = rule.frontmatter.simplify_globs_to_parent.unwrap_or(true);
+        // Determine output strategy using new outputIn field (or legacy simplifyGlobsToParent)
+        let strategy = rule.frontmatter.get_output_strategy();
 
-        let dirs = if simplify {
-            // Find common parent directory
-            find_common_parent_directory(globs)
-        } else {
-            // Find all directories that match the globs
-            find_matching_directories(project_root, globs)?
+        let dirs = match strategy.as_str() {
+            "common-parent" => {
+                // Find common parent directory across all glob matches
+                find_common_parent_directory(globs)
+            }
+            "parent" => {
+                // Find all directories that contain matching files
+                find_matching_directories(project_root, globs)?
+            }
+            "matched" => {
+                // For directory globs (trailing slash), output IN the matched directory
+                // For file globs, fall back to parent
+                find_matched_or_parent_directories(project_root, globs)?
+            }
+            _ => {
+                // Unknown strategy, fall back to parent
+                eprintln!("Warning: Unknown outputIn value '{}', using 'parent'", strategy);
+                find_matching_directories(project_root, globs)?
+            }
         };
 
         for dir in dirs {
@@ -315,6 +328,89 @@ fn find_matching_directories(project_root: &Path, globs: &[String]) -> Result<Ha
             } else {
                 // File is in the root directory
                 directories.insert(PathBuf::from("."));
+            }
+        }
+    }
+
+    Ok(directories)
+}
+
+/// Find matched directories (for trailing slash globs) or parent directories (for file globs)
+/// This implements the "matched" output strategy
+fn find_matched_or_parent_directories(project_root: &Path, globs: &[String]) -> Result<HashSet<PathBuf>> {
+    use walkdir::WalkDir;
+
+    let mut directories = HashSet::new();
+
+    for pattern in globs {
+        // Check if this is a directory glob (trailing slash)
+        let is_dir_glob = pattern.ends_with('/');
+
+        if is_dir_glob {
+            // Directory glob - find directories matching the pattern
+            let dir_pattern = pattern.trim_end_matches('/');
+            let glob = Glob::new(dir_pattern)?;
+
+            for entry in WalkDir::new(project_root)
+                .follow_links(false)
+                .into_iter()
+                .filter_entry(|e| {
+                    if e.path() == project_root {
+                        return true;
+                    }
+                    let name = e.file_name().to_string_lossy();
+                    !name.starts_with('.')
+                        && name != "node_modules"
+                        && name != "target"
+                        && name != "dist"
+                })
+                .filter_map(|e| e.ok())
+            {
+                if !entry.file_type().is_dir() {
+                    continue;
+                }
+
+                let rel_path = entry.path().strip_prefix(project_root)
+                    .unwrap_or(entry.path());
+
+                if glob.compile_matcher().is_match(rel_path) {
+                    directories.insert(rel_path.to_path_buf());
+                }
+            }
+        } else {
+            // File glob - fall back to parent strategy
+            let glob = Glob::new(pattern)?;
+            let globset = GlobSetBuilder::new().add(glob).build()?;
+
+            for entry in WalkDir::new(project_root)
+                .follow_links(false)
+                .into_iter()
+                .filter_entry(|e| {
+                    if e.path() == project_root {
+                        return true;
+                    }
+                    let name = e.file_name().to_string_lossy();
+                    !name.starts_with('.')
+                        && name != "node_modules"
+                        && name != "target"
+                        && name != "dist"
+                })
+                .filter_map(|e| e.ok())
+            {
+                if !entry.file_type().is_file() {
+                    continue;
+                }
+
+                let rel_path = entry.path().strip_prefix(project_root)
+                    .unwrap_or(entry.path());
+
+                if globset.is_match(rel_path) {
+                    if let Some(parent) = rel_path.parent() {
+                        directories.insert(parent.to_path_buf());
+                    } else {
+                        directories.insert(PathBuf::from("."));
+                    }
+                }
             }
         }
     }

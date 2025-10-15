@@ -149,11 +149,17 @@ fn test_no_depth_limit() {
 
     // Create deep nesting (10 levels on Windows due to MAX_PATH, 20 on Unix)
     // Windows has a 260 character path limit by default, and temp dirs can be long
-    let deep_path = if cfg!(windows) {
-        "a/b/c/d/e/f/g/h/i/j"
+    let (deep_path, expected_depth) = if cfg!(windows) {
+        ("a/b/c/d/e/f/g/h/i/j", 10)
     } else {
-        "a/b/c/d/e/f/g/h/i/j/k/l/m/n/o/p/q/r/s/t"
+        ("a/b/c/d/e/f/g/h/i/j/k/l/m/n/o/p/q/r/s/t", 20)
     };
+
+    eprintln!("Test environment:");
+    eprintln!("  OS: {}", std::env::consts::OS);
+    eprintln!("  Temp dir: {:?}", tmp.path());
+    eprintln!("  Creating nested path: {}", deep_path);
+    eprintln!("  Expected depth: {} levels", expected_depth);
 
     fs::create_dir_all(deep_path).unwrap();
     fs::write("AGENTS.md", "Root").unwrap();
@@ -161,14 +167,23 @@ fn test_no_depth_limit() {
 
     let info = ProjectInfo::detect().unwrap();
 
+    eprintln!("Detection results:");
+    eprintln!("  Found {} AGENTS.md files", info.agents_md_locations.len());
+    for (i, path) in info.agents_md_locations.iter().enumerate() {
+        eprintln!("  [{}] {}", i, path.display());
+    }
+
     // Should find both, even at significant depth
     assert_eq!(info.agents_md_locations.len(), 2,
-        "Should find both root and nested AGENTS.md files");
+        "Should find both root and nested AGENTS.md files (OS: {}, depth: {} levels)",
+        std::env::consts::OS, expected_depth);
+
     assert!(info.agents_md_locations.contains(&PathBuf::from("AGENTS.md")),
-        "Should find root AGENTS.md");
+        "Should find root AGENTS.md (found: {:?})", info.agents_md_locations);
+
     assert!(info.agents_md_locations.iter().any(|p| p.to_string_lossy().contains("a/b/c/d")),
-        "Should find AGENTS.md at depth 10+ (actual paths: {:?})",
-        info.agents_md_locations);
+        "Should find nested AGENTS.md at depth {}+ (OS: {}, found paths: {:?})",
+        expected_depth, std::env::consts::OS, info.agents_md_locations);
 }
 
 /// Helper to change directory and restore on drop

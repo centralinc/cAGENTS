@@ -82,7 +82,7 @@ jobs:
       - name: Publish to crates.io
         if: steps.changesets.outputs.published == 'true'
         run: |
-          cargo login ${{ secrets.CARGO_TOKEN }}
+          cargo login ${{ secrets.CARGO_REGISTRY_TOKEN }}
           # Publish core first (cli depends on it)
           cd crates/cagents-core
           cargo publish --allow-dirty
@@ -91,7 +91,7 @@ jobs:
           sleep 30
           cargo publish --allow-dirty
         env:
-          CARGO_TOKEN: ${{ secrets.CARGO_TOKEN }}
+          CARGO_REGISTRY_TOKEN: ${{ secrets.CARGO_REGISTRY_TOKEN }}
 
       - name: Create GitHub Release
         if: steps.changesets.outputs.published == 'true'

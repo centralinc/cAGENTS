@@ -29,7 +29,6 @@ targets = ["agents-md", "claude-md"]
     // Create template that only applies to claude-md
     fs::write(".cAGENTS/templates/claude-specific.md", r#"---
 name: claude-specific
-alwaysApply: true
 when:
   target: ["claude-md"]
 ---
@@ -38,10 +37,9 @@ when:
 This should only appear in CLAUDE.md
 "#).unwrap();
 
-    // Create template that applies to both
+    // Create template that applies to both (no when clause = all targets)
     fs::write(".cAGENTS/templates/common.md", r#"---
 name: common
-alwaysApply: true
 ---
 # Common Rules
 
@@ -89,7 +87,6 @@ targets = ["agents-md", "claude-md", "cursorrules"]
     // Create template that only applies to cursorrules
     fs::write(".cAGENTS/templates/cursor-only.md", r#"---
 name: cursor-only
-alwaysApply: true
 when:
   target: ["cursorrules"]
 ---
@@ -141,7 +138,6 @@ targets = ["agents-md", "claude-md", "cursorrules"]
     // Create template that applies to agents-md and claude-md but not cursorrules
     fs::write(".cAGENTS/templates/markdown-only.md", r#"---
 name: markdown-only
-alwaysApply: true
 when:
   target: ["agents-md", "claude-md"]
 ---

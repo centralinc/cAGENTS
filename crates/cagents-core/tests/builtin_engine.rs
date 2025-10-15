@@ -31,7 +31,6 @@ owner = "Alice"
     template.write_str(
         r#"---
 name: test-template
-alwaysApply: true
 ---
 # {{project}} - Rules
 
@@ -91,7 +90,6 @@ project = "TestProject"
     template.write_str(
         r#"---
 name: test
-alwaysApply: true
 ---
 # {{project}}
 Owner: {{undefined_var}}
@@ -147,7 +145,6 @@ active = true
     template.write_str(
         r#"---
 name: test
-alwaysApply: true
 ---
 Project: {{project}}
 Version: {{version}}

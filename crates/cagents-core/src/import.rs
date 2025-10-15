@@ -38,7 +38,6 @@ project = "imported-from-cursor"
     let template = format!(r#"---
 name: agents-cursor
 description: Imported from .cursorrules
-alwaysApply: true
 targets: ["agentsmd", "cursor"]
 order: 1
 ---
@@ -142,11 +141,8 @@ targets = ["agentsmd", "cursor"]
                     if common_parent != globs {
                         simplified_rules.push((name.to_string(), globs.clone(), common_parent));
                     }
-                } else {
-                    frontmatter.push_str("alwaysApply: true\n");
                 }
-            } else {
-                frontmatter.push_str("alwaysApply: true\n");
+                // Note: empty globs or no globs = no when clause = implicitly always apply
             }
 
             frontmatter.push_str("targets: [\"agentsmd\", \"cursor\"]\n");
@@ -309,7 +305,6 @@ project = "imported-from-agents-md"
     let template = format!(r#"---
 name: agents-root
 description: Imported from AGENTS.md
-alwaysApply: true
 order: 1
 ---
 {}
@@ -382,7 +377,6 @@ project = "imported-from-claude-md"
     let template = format!(r#"---
 name: agents-root
 description: Imported from CLAUDE.md
-alwaysApply: true
 order: 1
 ---
 {}
@@ -533,7 +527,6 @@ project = "imported-merged"
         let template = format!(r#"---
 name: {}
 description: Imported from {}
-alwaysApply: true
 {}
 order: {}
 ---

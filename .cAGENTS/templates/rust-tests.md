@@ -2,9 +2,8 @@
 name: rust-tests
 description: Testing Guide for rust tests
 globs:
-  - crates/**/tests/
+  - crates/**/tests/**
 simplifyGlobsToParent: false
-alwaysApply: true
 order: 30
 ---
 ## Running Tests

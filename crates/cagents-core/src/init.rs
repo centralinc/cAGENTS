@@ -357,7 +357,6 @@ pub fn migrate_simple(info: &ProjectInfo, force: bool, backup: bool) -> Result<(
     let template = format!(r#"---
 name: agents-root
 description: Migrated from existing AGENTS.md
-alwaysApply: true
 order: 1
 ---
 {}
@@ -478,7 +477,7 @@ fn migrate_multiple_agents_md(info: &ProjectInfo, force: bool, backup: bool) -> 
         };
 
         // Generate glob pattern from location
-        // For migrated files, use alwaysApply instead of globs to avoid nested outputs
+        // For migrated files, don't use globs to avoid nested outputs
         // The user can manually add globs after migration if they want directory-specific rules
         let glob_pattern: Option<Vec<String>> = None;
 
@@ -490,14 +489,12 @@ fn migrate_multiple_agents_md(info: &ProjectInfo, force: bool, backup: bool) -> 
         );
 
         if let Some(globs) = glob_pattern {
-            frontmatter.push_str("alwaysApply: false\n");
             frontmatter.push_str("globs:\n");
             for glob in &globs {
                 frontmatter.push_str(&format!("  - \"{}\"\n", glob));
             }
-        } else {
-            frontmatter.push_str("alwaysApply: true\n");
         }
+        // Note: No when clause = implicitly always apply everywhere
 
         frontmatter.push_str(&format!("order: {}\n", (idx + 1) * 10));
 

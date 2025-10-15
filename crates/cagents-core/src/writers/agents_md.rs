@@ -26,7 +26,14 @@ For file-specific context: run `cagents context <filename>`
     Ok(())
 }
 
-/// Load previously written output locations from tracking file
+/// Tracking information for cleanup
+#[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
+pub struct OutputTracking {
+    pub directories: Vec<PathBuf>,
+    pub targets: Vec<String>,
+}
+
+/// Load previously written output tracking from cache file
 pub fn load_output_tracking() -> Result<Vec<PathBuf>> {
     let tracking_file = PathBuf::from(".cAGENTS/.output-cache");
 
@@ -35,6 +42,13 @@ pub fn load_output_tracking() -> Result<Vec<PathBuf>> {
     }
 
     let content = fs::read_to_string(&tracking_file)?;
+
+    // Try to parse as JSON first (new format)
+    if let Ok(tracking) = serde_json::from_str::<OutputTracking>(&content) {
+        return Ok(tracking.directories);
+    }
+
+    // Fallback to old format (line-separated paths)
     let paths: Vec<PathBuf> = content
         .lines()
         .filter(|line| !line.trim().is_empty())
@@ -44,8 +58,29 @@ pub fn load_output_tracking() -> Result<Vec<PathBuf>> {
     Ok(paths)
 }
 
-/// Save output locations to tracking file
+/// Load full tracking information (directories + targets)
+pub fn load_full_tracking() -> Result<Option<OutputTracking>> {
+    let tracking_file = PathBuf::from(".cAGENTS/.output-cache");
+
+    if !tracking_file.exists() {
+        return Ok(None);
+    }
+
+    let content = fs::read_to_string(&tracking_file)?;
+
+    // Try to parse as JSON (new format)
+    if let Ok(tracking) = serde_json::from_str::<OutputTracking>(&content) {
+        return Ok(Some(tracking));
+    }
+
+    // Fallback to old format - only has directories, no targets info
+    Ok(None)
+}
+
+/// Save output tracking (directories and targets)
 pub fn save_output_tracking(paths: &[PathBuf]) -> Result<()> {
+    // Legacy function - only saves directories
+    // Use save_full_tracking for new behavior
     let tracking_file = PathBuf::from(".cAGENTS/.output-cache");
 
     let content = paths
@@ -55,6 +90,21 @@ pub fn save_output_tracking(paths: &[PathBuf]) -> Result<()> {
         .join("\n");
 
     fs::write(&tracking_file, content + "\n")?;
+
+    Ok(())
+}
+
+/// Save full tracking information (directories + targets)
+pub fn save_full_tracking(directories: &[PathBuf], targets: &[String]) -> Result<()> {
+    let tracking_file = PathBuf::from(".cAGENTS/.output-cache");
+
+    let tracking = OutputTracking {
+        directories: directories.to_vec(),
+        targets: targets.to_vec(),
+    };
+
+    let json = serde_json::to_string_pretty(&tracking)?;
+    fs::write(&tracking_file, json)?;
 
     Ok(())
 }
@@ -75,6 +125,46 @@ pub fn cleanup_old_outputs(current_outputs: &[PathBuf]) -> Result<usize> {
         if agents_path.exists() {
             if let Err(e) = fs::remove_file(&agents_path) {
                 eprintln!("  Warning: Could not remove old {}: {}", agents_path.display(), e);
+            } else {
+                cleaned_count += 1;
+            }
+        }
+    }
+
+    Ok(cleaned_count)
+}
+
+/// Clean up output files for targets that are no longer in config
+pub fn cleanup_old_target_files(current_targets: &[String], output_root: &Path) -> Result<usize> {
+    let previous_tracking = load_full_tracking()?;
+    let mut cleaned_count = 0;
+
+    // If no previous tracking, nothing to clean up
+    let Some(prev) = previous_tracking else {
+        return Ok(0);
+    };
+
+    // Find targets that were removed
+    let removed_targets: Vec<&String> = prev.targets.iter()
+        .filter(|t| !current_targets.contains(t))
+        .collect();
+
+    if removed_targets.is_empty() {
+        return Ok(0);
+    }
+
+    // For each removed target, clean up its files
+    for target in removed_targets {
+        let file_path = match target.as_str() {
+            "agents-md" => output_root.join("AGENTS.md"),
+            "claude-md" => output_root.join("CLAUDE.md"),
+            "cursorrules" => output_root.join(".cursorrules"),
+            _ => continue,
+        };
+
+        if file_path.exists() {
+            if let Err(e) = fs::remove_file(&file_path) {
+                eprintln!("  Warning: Could not remove old {}: {}", file_path.display(), e);
             } else {
                 cleaned_count += 1;
             }

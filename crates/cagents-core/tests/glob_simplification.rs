@@ -30,7 +30,6 @@ fn test_simplify_globs_to_parent_enabled() {
                 "src/cache/**/*.int.ts".to_string(),
             ]),
             simplify_globs_to_parent: Some(true),
-            always_apply: None,
             ..Default::default()
         },
         body: "# Integration Test Rules".to_string(),
@@ -74,7 +73,6 @@ fn test_simplify_globs_to_parent_disabled() {
                 "src/db/**/*.ts".to_string(),
             ]),
             simplify_globs_to_parent: Some(false),
-            always_apply: None,
             ..Default::default()
         },
         body: "# Rules".to_string(),
@@ -111,7 +109,6 @@ fn test_default_simplify_globs_is_true() {
                 "components/Form/**/*.tsx".to_string(),
             ]),
             simplify_globs_to_parent: None, // Default should be true
-            always_apply: None,
             ..Default::default()
         },
         body: "# Component Rules".to_string(),

@@ -48,7 +48,6 @@ Templates are Markdown files with YAML frontmatter:
 ```markdown
 ---
 name: project-guidelines
-alwaysApply: true
 order: 1
 ---
 # Project Guidelines
@@ -143,11 +142,11 @@ engine: builtin:simple           # Optional: override config engine
 globs:                           # Optional: generate nested AGENTS.md in matching dirs
   - "src/api/**"
   - "tests/**"
-alwaysApply: true                # Optional: include in root AGENTS.md
 when:                            # Optional: conditional inclusion
   env: ["codex-cloud"]           # Only include when --env codex-cloud
   language: ["rust"]             # Only include when --language rust
   target: ["agents-md"]          # Only include for specific output formats
+                                 # NOTE: No when clause = rule applies everywhere
 order: 10                        # Optional: sort order (default: 50, lower = earlier)
 targets: ["agents-md", "cursor"] # Optional: which outputs get this template
 ---
@@ -430,7 +429,7 @@ One `cagents build` generates all formats.
 
 ```
 .cAGENTS/templates/
-├── base-guidelines.md       # alwaysApply: true
+├── base-guidelines.md       # no when/globs = applies everywhere
 ├── rust-rules.md            # globs: ["**/*.rs"]
 ├── typescript-rules.md      # globs: ["**/*.ts"]
 └── cloud-agent-context.md   # when: { env: ["codex-cloud"] }

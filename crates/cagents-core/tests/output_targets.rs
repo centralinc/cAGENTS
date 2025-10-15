@@ -58,7 +58,6 @@ engine = "builtin:simple"
 
     fs::write(".cAGENTS/templates/main.md", r#"---
 name: main
-alwaysApply: true
 ---
 # Test Rules
 "#).unwrap();
@@ -94,7 +93,6 @@ targets = ["agents-md", "claude-md", "cursorrules"]
 
     fs::write(".cAGENTS/templates/main.md", r#"---
 name: main
-alwaysApply: true
 ---
 # Test Rules
 
@@ -141,7 +139,6 @@ targets = ["cursorrules"]
 
     fs::write(".cAGENTS/templates/main.md", r#"---
 name: main
-alwaysApply: true
 ---
 # Cursor Rules
 "#).unwrap();

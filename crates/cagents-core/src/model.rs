@@ -67,8 +67,6 @@ pub struct RuleFrontmatter {
     pub description: Option<String>,
     pub engine: Option<String>,
     pub globs: Option<Vec<String>>,
-    #[serde(rename = "alwaysApply")]
-    pub always_apply: Option<bool>,
     pub order: Option<i32>,
     pub when: Option<When>,
     pub vars: Option<serde_json::Value>,

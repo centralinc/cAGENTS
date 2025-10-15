@@ -1,7 +1,6 @@
 ---
 name: shared-root
 description: shared sections
-alwaysApply: true
 order: 20
 ---
 
@@ -90,7 +89,7 @@ The pipeline flows through these modules (see `crates/cagents-core/src/lib.rs`):
 1. **config** - TOML config loader (project-local `.agentscribe/config.toml` + user-level `~/.cagents/config.toml`)
 2. **loader** - Rule discovery (front-matter + body parsing)
 3. **model** - Data structures for `ProjectConfig`, `RuleFrontmatter`, scoping (`When`), merge strategies
-4. **planner** - Determines which rules apply based on globs, `alwaysApply`, `when` conditions (env/role/language), order, and extends
+4. **planner** - Determines which rules apply based on globs, `when` conditions (env/role/language), order, and extends
 5. **render** - Template rendering via BYOB command adapters
 6. **adapters/** - External command protocol via stdin/stdout JSON (built-in engines removed in M11)
 7. **merge** - Section-aware rule merging
@@ -108,7 +107,7 @@ Config files use TOML with these key sections:
 - `[variables]` - `static`, `env`, `command` (for template data)
 - `[execution]` - `shell`, `timeoutMs`, `allowCommands`
 
-Rule templates have YAML front-matter with fields like `engine`, `globs`, `alwaysApply`, `when`, `order`, `extends`, `targets`, `merge`.
+Rule templates have YAML front-matter with fields like `engine`, `globs`, `when`, `order`, `extends`, `targets`, `merge`.
 
 ### BYOC Compiler Protocol
 

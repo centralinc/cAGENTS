@@ -26,7 +26,7 @@ fn test_scenario_monorepo_with_context() {
         Rule {
             frontmatter: RuleFrontmatter {
                 name: Some("workspace".to_string()),
-                always_apply: Some(true),
+                // No when clause = implicitly always applies
                 ..Default::default()
             },
             body: "Workspace rules".to_string(),
@@ -151,7 +151,7 @@ fn test_scenario_mixed_always_apply_and_globs() {
         Rule {
             frontmatter: RuleFrontmatter {
                 name: Some("global".to_string()),
-                always_apply: Some(true),
+                // No when clause = implicitly always applies
                 ..Default::default()
             },
             body: "Global rules".to_string(),
@@ -227,7 +227,6 @@ fn test_scenario_environment_based_rules() {
     let rule_prod = Rule {
         frontmatter: RuleFrontmatter {
             name: Some("prod-only".to_string()),
-            always_apply: Some(true),
             when: Some(cagents_core::model::When::legacy(
                 Some(vec!["prod".to_string(), "staging".to_string()]),
                 None,
@@ -243,7 +242,6 @@ fn test_scenario_environment_based_rules() {
     let rule_dev = Rule {
         frontmatter: RuleFrontmatter {
             name: Some("dev-only".to_string()),
-            always_apply: Some(true),
             when: Some(cagents_core::model::When::legacy(
                 Some(vec!["dev".to_string()]),
                 None,
@@ -276,7 +274,6 @@ fn test_scenario_all_filters_combined() {
     let rule = Rule {
         frontmatter: RuleFrontmatter {
             name: Some("specific".to_string()),
-            always_apply: Some(true),
             when: Some(cagents_core::model::When::legacy(
                 Some(vec!["prod".to_string()]),
                 Some(vec!["backend".to_string()]),

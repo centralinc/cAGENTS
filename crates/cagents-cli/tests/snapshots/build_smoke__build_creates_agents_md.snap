@@ -1,5 +1,6 @@
 ---
 source: crates/cagents-cli/tests/build_smoke.rs
+assertion_line: 42
 expression: content
 ---
 <!--
@@ -19,12 +20,6 @@ For file-specific context: run `cagents context <filename>`
 
 
 When working on this project, maintain a concise communication style.
-
-## TypeScript
-
-- Prefer explicit types; avoid `any`.
-- Run typecheck: `pnpm typecheck`.
-- See [System Models](docs/system-design/models.md) for domain entities.
 
 ## TypeScript
 

@@ -147,19 +147,28 @@ fn test_no_depth_limit() {
     let tmp = TempDir::new().unwrap();
     let _guard = ChangeDir::new(tmp.path());
 
-    // Create very deep nesting (20 levels)
-    let deep_path = "a/b/c/d/e/f/g/h/i/j/k/l/m/n/o/p/q/r/s/t";
+    // Create deep nesting (10 levels on Windows due to MAX_PATH, 20 on Unix)
+    // Windows has a 260 character path limit by default, and temp dirs can be long
+    let deep_path = if cfg!(windows) {
+        "a/b/c/d/e/f/g/h/i/j"
+    } else {
+        "a/b/c/d/e/f/g/h/i/j/k/l/m/n/o/p/q/r/s/t"
+    };
+
     fs::create_dir_all(deep_path).unwrap();
     fs::write("AGENTS.md", "Root").unwrap();
     fs::write(format!("{}/AGENTS.md", deep_path), "Deep").unwrap();
 
     let info = ProjectInfo::detect().unwrap();
 
-    // Should find both, even at depth 20
-    assert_eq!(info.agents_md_locations.len(), 2);
-    assert!(info.agents_md_locations.contains(&PathBuf::from("AGENTS.md")));
+    // Should find both, even at significant depth
+    assert_eq!(info.agents_md_locations.len(), 2,
+        "Should find both root and nested AGENTS.md files");
+    assert!(info.agents_md_locations.contains(&PathBuf::from("AGENTS.md")),
+        "Should find root AGENTS.md");
     assert!(info.agents_md_locations.iter().any(|p| p.to_string_lossy().contains("a/b/c/d")),
-        "Should find AGENTS.md at depth 20+");
+        "Should find AGENTS.md at depth 10+ (actual paths: {:?})",
+        info.agents_md_locations);
 }
 
 /// Helper to change directory and restore on drop

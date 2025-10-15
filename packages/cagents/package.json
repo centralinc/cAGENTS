@@ -11,6 +11,7 @@
     "build": "tsc -p tsconfig.json",
     "test": "node --test dist/**/*.test.js",
     "prepare": "npm run build",
+    "postinstall": "node dist/postinstall.js",
     "fmt": "echo 'formatting placeholder'"
   },
   "engines": {

@@ -1,6 +1,6 @@
 {
   "name": "cagents",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "description": "Node wrapper for the cAGENTS CLI - AGENTS.md generator",
   "bin": {
     "cagents": "bin/cagents.js"

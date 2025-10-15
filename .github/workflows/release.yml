@@ -63,7 +63,7 @@ jobs:
           setupGitUser: true
           createGithubReleases: true
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_TOKEN: ${{ secrets.GH_DEPLOY_TOKEN }}
           NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
 
       - name: Setup Rust
@@ -99,4 +99,4 @@ jobs:
             --title "v${VERSION}" \
             --notes "See [CHANGELOG.md](./CHANGELOG.md) for details."
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_TOKEN: ${{ secrets.GH_DEPLOY_TOKEN }}

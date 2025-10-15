@@ -336,7 +336,7 @@ pub fn cmd_build(
         .output
         .as_ref()
         .and_then(|o| o.targets.as_ref())
-        .map(|t| t.clone())
+        .cloned()
         .unwrap_or_else(|| vec!["agents-md".to_string()]);
 
     for (idx, (target_dir, rules)) in outputs.iter().enumerate() {
@@ -581,7 +581,7 @@ pub fn cmd_preview(_path: &str) -> Result<()> {
         // Show which rules contribute
         println!("  {} {}", "Rules:".bright_black(), format!("{} template(s)", rules.len()).bright_white());
         for rule in rules {
-            let name = rule.frontmatter.name.as_ref().map(|s| s.as_str()).unwrap_or("(unnamed)");
+            let name = rule.frontmatter.name.as_deref().unwrap_or("(unnamed)");
             println!("    {} {}", "•".bright_black(), name.bright_white());
 
             if let Some(globs) = &rule.frontmatter.globs {
@@ -638,7 +638,7 @@ pub fn cmd_preview(_path: &str) -> Result<()> {
 
         loop {
             // Build menu options
-            let mut options: Vec<String> = outputs.iter().map(|(dir, _)| {
+            let mut options: Vec<String> = outputs.keys().map(|dir| {
                 if dir == &PathBuf::from(".") {
                     "AGENTS.md (root)".to_string()
                 } else {
@@ -675,9 +675,9 @@ pub fn cmd_preview(_path: &str) -> Result<()> {
                     };
 
                     println!();
-                    println!("{} {}", "═".repeat(70).bright_black(), "");
+                    println!("{}", "═".repeat(70).bright_black());
                     println!("{} {}", "▸".bright_cyan(), output_path.display().to_string().bright_cyan().bold());
-                    println!("{} {}", "═".repeat(70).bright_black(), "");
+                    println!("{}", "═".repeat(70).bright_black());
                     println!();
 
                     // Render full content
@@ -695,7 +695,7 @@ pub fn cmd_preview(_path: &str) -> Result<()> {
                     let merged = merge::merge_rule_bodies(&rendered_bodies)?;
                     println!("{}", merged);
                     println!();
-                    println!("{} {}", "═".repeat(70).bright_black(), "");
+                    println!("{}", "═".repeat(70).bright_black());
                     println!();
                 }
             } else {
@@ -1180,7 +1180,7 @@ pub fn cmd_context(file_path: &str, var_args: Vec<String>, json_output: bool) ->
 
         println!("## Matched Rules ({})", matching_rules.len());
         for rule in &matching_rules {
-            let name = rule.frontmatter.name.as_ref().map(|s| s.as_str()).unwrap_or("unnamed");
+            let name = rule.frontmatter.name.as_deref().unwrap_or("unnamed");
             let reason = if rule.frontmatter.always_apply == Some(true) {
                 "alwaysApply: true".to_string()
             } else if let Some(globs) = &rule.frontmatter.globs {

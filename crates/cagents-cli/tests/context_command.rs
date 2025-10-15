@@ -2,6 +2,15 @@ use assert_cmd::Command;
 use assert_fs::prelude::*;
 use predicates::prelude::*;
 
+// Import cross-platform path utilities from cagents-core tests
+// Note: This requires adding the path to test dependencies
+use std::path::Path;
+
+fn path_to_command(cmd: &str, path: &Path) -> String {
+    let path_str = path.display().to_string().replace('\\', "/");
+    format!("{} \"{}\"", cmd, path_str)
+}
+
 // Helper to create a simple pass-through renderer
 fn write_passthrough_renderer(dir: &assert_fs::TempDir) -> String {
     let script = dir.child("render.py");
@@ -14,7 +23,8 @@ print(json.dumps({"content": template}))
 "#,
         )
         .unwrap();
-    format!("python3 {}", script.path().display())
+    // Use cross-platform path utility
+    path_to_command("python3", script.path())
 }
 
 #[test]
@@ -34,7 +44,7 @@ templatesDir = "templates"
 outputRoot = "."
 
 [defaults]
-engine = "command:{}"
+engine = """command:{}"""
 
 [variables.static]
 project = "test-project"
@@ -104,7 +114,7 @@ templatesDir = "templates"
 outputRoot = "."
 
 [defaults]
-engine = "command:{}"
+engine = """command:{}"""
 
 [variables.static]
 project = "test-project"
@@ -166,7 +176,7 @@ templatesDir = "templates"
 outputRoot = "."
 
 [defaults]
-engine = "command:{}"
+engine = """command:{}"""
 "#, renderer_cmd)).unwrap();
 
     // Create templates

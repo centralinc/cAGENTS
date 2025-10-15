@@ -20,7 +20,7 @@ fn test_discover_rules() {
 
     // Find typescript rule
     let ts_rule = rules.iter().find(|r| {
-        r.frontmatter.name.as_ref().map(|n| n.as_str()) == Some("ts-basics")
+        r.frontmatter.name.as_deref() == Some("ts-basics")
     }).expect("Should find typescript rule");
 
     // Verify frontmatter fields

@@ -20,7 +20,9 @@ print(json.dumps({"content": template}))
         )
         .unwrap();
 
-    let command = format!("python3 {}", script.path().display());
+    // Quote path and use forward slashes for cross-platform compatibility
+    let path = script.path().display().to_string().replace('\\', "/");
+    let command = format!("python3 \"{}\"", path);
     let data = json!({"owner": "Jordan", "tone": "concise"});
     let frontmatter = json!({});
     let template = "Hello {{owner}}, tone is {{tone}}!";
@@ -47,7 +49,9 @@ print(json.dumps({"content": template}))
         )
         .unwrap();
 
-    let command = format!("python3 {}", script.path().display());
+    // Quote path and use forward slashes for cross-platform compatibility
+    let path = script.path().display().to_string().replace('\\', "/");
+    let command = format!("python3 \"{}\"", path);
     let data = json!({});
     let frontmatter = json!({"name": "project-rules"});
     let template = "Template: {{front_name}}";

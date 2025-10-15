@@ -1,0 +1,13 @@
+# Clippy configuration for cAGENTS
+#
+# This configuration helps catch common cross-platform issues
+
+# Maximum cognitive complexity for functions
+# Helps keep code maintainable
+cognitive-complexity-threshold = 30
+
+# Warn about missing documentation in public items
+missing-docs-in-public-items = false
+
+# Pedantic lints that help with cross-platform code
+# These catch common mistakes that can break on different platforms

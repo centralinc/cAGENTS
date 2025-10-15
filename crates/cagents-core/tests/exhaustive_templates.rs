@@ -8,7 +8,9 @@ use std::fs;
 fn write_renderer(temp: &TempDir, name: &str, python_body: &str) -> String {
     let script = temp.child(name);
     script.write_str(python_body).unwrap();
-    format!("python3 {}", script.path().display())
+    // Quote path and use forward slashes for cross-platform compatibility
+    let path = script.path().display().to_string().replace('\\', "/");
+    format!("python3 \"{}\"", path)
 }
 
 #[test]
@@ -46,14 +48,14 @@ outputRoot = "."
 "#,
     )?;
 
-    // Templates
+    // Templates - use single quotes in YAML to avoid escaping double quotes
     temp.child(".cAGENTS/templates/upper.md").write_str(&format!(
-        "---\nname: upper\nengine: \"command:{}\"\norder: 1\n---\nMixedCase\n",
+        "---\nname: upper\nengine: 'command:{}'\norder: 1\n---\nMixedCase\n",
         upper_command
     ))?;
 
     temp.child(".cAGENTS/templates/lower.md").write_str(&format!(
-        "---\nname: lower\nengine: \"command:{}\"\norder: 2\n---\nMixedCase\n",
+        "---\nname: lower\nengine: 'command:{}'\norder: 2\n---\nMixedCase\n",
         lower_command
     ))?;
 
@@ -89,8 +91,9 @@ print(json.dumps({"content": content}))
 "#,
     );
 
+    // Use triple-quoted TOML string to avoid escaping quotes
     temp.child(".cAGENTS/config.toml").write_str(&format!(
-        "[paths]\ntemplatesDir = \"templates\"\noutputRoot = \".\"\n\n[defaults]\nengine = \"command:{}\"\n\n[variables.static]\nproject = \"Defaults\"\n",
+        "[paths]\ntemplatesDir = \"templates\"\noutputRoot = \".\"\n\n[defaults]\nengine = \"\"\"command:{}\"\"\"\n\n[variables.static]\nproject = \"Defaults\"\n",
         command
     ))?;
 
@@ -129,8 +132,9 @@ print(json.dumps({"content": content}))
 "#,
     );
 
+    // Use triple-quoted TOML string to avoid escaping quotes
     temp.child(".cAGENTS/config.toml").write_str(&format!(
-        "[paths]\ntemplatesDir = \"templates\"\noutputRoot = \".\"\n\n[defaults]\nengine = \"command:{}\"\n",
+        "[paths]\ntemplatesDir = \"templates\"\noutputRoot = \".\"\n\n[defaults]\nengine = \"\"\"command:{}\"\"\"\n",
         command
     ))?;
 

@@ -6,6 +6,8 @@ use tempfile::TempDir;
 use std::env;
 use std::fs;
 
+mod test_utils;
+
 const RENDER_SCRIPT: &str = r#"
 import json
 import sys
@@ -48,7 +50,8 @@ fn render_with_byob(template: &str, data: Value) -> String {
     let tmp = TempDir::new().expect("temp dir");
     let script_path = tmp.path().join("render.py");
     fs::write(&script_path, RENDER_SCRIPT).expect("write renderer");
-    let command = format!("python3 {}", script_path.display());
+    // Use cross-platform path utility
+    let command = test_utils::path_to_command("python3", &script_path);
     cagents_core::adapters::command::render_external(
         &command,
         template,

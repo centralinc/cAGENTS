@@ -1,0 +1,16 @@
+# Clippy configuration for cAGENTS
+#
+# This configuration helps catch common cross-platform issues
+
+# Maximum cognitive complexity for functions
+# Helps keep code maintainable
+cognitive-complexity-threshold = 30
+
+# Allow expect() in tests for clearer error messages
+allow-expect-in-tests = true
+
+# Allow dbg!() macro in tests for debugging
+allow-dbg-in-tests = true
+
+# Pedantic lints that help with cross-platform code
+# These catch common mistakes that can break on different platforms

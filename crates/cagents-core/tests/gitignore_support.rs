@@ -181,7 +181,12 @@ fn test_no_depth_limit() {
     assert!(info.agents_md_locations.contains(&PathBuf::from("AGENTS.md")),
         "Should find root AGENTS.md (found: {:?})", info.agents_md_locations);
 
-    assert!(info.agents_md_locations.iter().any(|p| p.to_string_lossy().contains("a/b/c/d")),
+    // Check for nested path - need to handle both / and \ path separators
+    let has_nested = info.agents_md_locations.iter().any(|p| {
+        let path_str = p.to_string_lossy();
+        path_str.contains("a/b/c/d") || path_str.contains("a\\b\\c\\d")
+    });
+    assert!(has_nested,
         "Should find nested AGENTS.md at depth {}+ (OS: {}, found paths: {:?})",
         expected_depth, std::env::consts::OS, info.agents_md_locations);
 }

@@ -7,6 +7,7 @@
 
 const fs = require('fs');
 const path = require('path');
+const { execSync } = require('child_process');
 
 const rootDir = path.join(__dirname, '..');
 const packageJsonPath = path.join(rootDir, 'packages/cagents/package.json');
@@ -35,5 +36,18 @@ function updateCargoToml(filePath) {
 
 updateCargoToml(coreCargoPath);
 updateCargoToml(cliCargoPath);
+
+// Update Cargo.lock to reflect the new versions
+console.log('Updating Cargo.lock...');
+try {
+  execSync('cargo update --workspace', {
+    cwd: rootDir,
+    stdio: 'inherit'
+  });
+  console.log('✓ Updated Cargo.lock');
+} catch (error) {
+  console.error('Failed to update Cargo.lock:', error.message);
+  process.exit(1);
+}
 
 console.log('✓ Version sync complete');

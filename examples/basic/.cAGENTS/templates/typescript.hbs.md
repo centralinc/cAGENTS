@@ -2,9 +2,8 @@
 name: ts-basics
 description: TypeScript guidance
 globs: ["**/*.ts","packages/frontend/**"]
-alwaysApply: true
 order: 10
-targets: ["agentsmd","cursor"]
+targets: ["agents-md","cursor"]
 ---
 ## TypeScript
 

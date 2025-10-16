@@ -58,13 +58,12 @@ engine = "builtin:simple"
 
     fs::write(".cAGENTS/templates/main.md", r#"---
 name: main
-alwaysApply: true
 ---
 # Test Rules
 "#).unwrap();
 
     // Run build
-    cagents_core::cmd_build(None, None, None, None, false).unwrap();
+    cagents_core::cmd_build(None, false).unwrap();
 
     // Should create AGENTS.md by default
     assert!(PathBuf::from("AGENTS.md").exists(), "Should create AGENTS.md by default");
@@ -94,7 +93,6 @@ targets = ["agents-md", "claude-md", "cursorrules"]
 
     fs::write(".cAGENTS/templates/main.md", r#"---
 name: main
-alwaysApply: true
 ---
 # Test Rules
 
@@ -102,7 +100,7 @@ Development guidelines here.
 "#).unwrap();
 
     // Run build
-    cagents_core::cmd_build(None, None, None, None, false).unwrap();
+    cagents_core::cmd_build(None, false).unwrap();
 
     // Should create all configured output files
     assert!(PathBuf::from("AGENTS.md").exists(), "Should create AGENTS.md");
@@ -141,13 +139,12 @@ targets = ["cursorrules"]
 
     fs::write(".cAGENTS/templates/main.md", r#"---
 name: main
-alwaysApply: true
 ---
 # Cursor Rules
 "#).unwrap();
 
     // Run build
-    cagents_core::cmd_build(None, None, None, None, false).unwrap();
+    cagents_core::cmd_build(None, false).unwrap();
 
     // Should only create .cursorrules
     assert!(!PathBuf::from("AGENTS.md").exists(), "Should NOT create AGENTS.md");

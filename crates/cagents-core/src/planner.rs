@@ -9,20 +9,62 @@ use globset::{Glob, GlobSetBuilder};
 /// Build context from CLI args
 #[derive(Debug, Clone)]
 pub struct BuildContext {
+    // Legacy fields for backward compatibility
     pub env: Option<String>,
     pub role: Option<String>,
     pub language: Option<String>,
     pub target: Option<String>,
+
+    // Arbitrary variables
+    pub variables: HashMap<String, String>,
 }
 
 impl BuildContext {
     pub fn new(env: Option<String>, role: Option<String>, language: Option<String>) -> Self {
-        Self { env, role, language, target: None }
+        let mut variables = HashMap::new();
+
+        // Store legacy values in variables map for unified access
+        if let Some(env_val) = &env {
+            variables.insert("env".to_string(), env_val.clone());
+        }
+        if let Some(role_val) = &role {
+            variables.insert("role".to_string(), role_val.clone());
+        }
+        if let Some(language_val) = &language {
+            variables.insert("language".to_string(), language_val.clone());
+        }
+
+        Self {
+            env,
+            role,
+            language,
+            target: None,
+            variables,
+        }
     }
 
     /// Create context with specific target
     pub fn with_target(env: Option<String>, role: Option<String>, language: Option<String>, target: String) -> Self {
-        Self { env, role, language, target: Some(target) }
+        let mut ctx = Self::new(env, role, language);
+        ctx.target = Some(target.clone());
+        ctx.variables.insert("target".to_string(), target);
+        ctx
+    }
+
+    /// Create context from arbitrary variables
+    pub fn from_variables(vars: HashMap<String, String>) -> Self {
+        let env = vars.get("env").cloned();
+        let role = vars.get("role").cloned();
+        let language = vars.get("language").cloned();
+        let target = vars.get("target").cloned();
+
+        Self {
+            env,
+            role,
+            language,
+            target,
+            variables: vars,
+        }
     }
 
     /// Check if a rule's when clause matches this context
@@ -31,50 +73,21 @@ impl BuildContext {
             return true; // No when clause = always matches
         };
 
-        // Check env
-        if let Some(env_list) = &when.env {
-            if let Some(ctx_env) = &self.env {
-                if !env_list.contains(ctx_env) {
-                    return false;
-                }
-            } else {
-                // Context has no env, but rule requires one
-                return false;
-            }
-        }
+        // Get all variable requirements from when clause (includes legacy fields + arbitrary vars)
+        let when_vars = when.all_variables();
 
-        // Check role
-        if let Some(role_list) = &when.role {
-            if let Some(ctx_role) = &self.role {
-                if !role_list.contains(ctx_role) {
-                    return false;
-                }
-            } else {
-                // Context has no role, but rule requires one
-                return false;
-            }
-        }
+        // Check each variable requirement
+        for (var_name, allowed_values) in when_vars {
+            // Get the context value for this variable
+            let ctx_value = self.variables.get(&var_name);
 
-        // Check language
-        if let Some(lang_list) = &when.language {
-            if let Some(ctx_lang) = &self.language {
-                if !lang_list.contains(ctx_lang) {
+            if let Some(ctx_val) = ctx_value {
+                // Context has this variable - check if value is in allowed list
+                if !allowed_values.contains(ctx_val) {
                     return false;
                 }
             } else {
-                // Context has no language, but rule requires one
-                return false;
-            }
-        }
-
-        // Check target
-        if let Some(target_list) = &when.target {
-            if let Some(ctx_target) = &self.target {
-                if !target_list.contains(ctx_target) {
-                    return false;
-                }
-            } else {
-                // Context has no target, but rule requires one
+                // Context doesn't have this variable, but rule requires it
                 return false;
             }
         }
@@ -85,20 +98,19 @@ impl BuildContext {
 
 /// Filter rules that apply to the root output
 /// M1 Slice 3: Added context filtering via when clauses
-/// - A rule applies if alwaysApply is true OR globs is missing/empty
+/// - A rule applies if globs is missing/empty (no file scoping)
 /// - When clause filtering is done later per-target to support when.target
 pub fn filter_rules_for_root(rules: &[Rule], _context: &BuildContext) -> Result<Vec<Rule>> {
     let filtered: Vec<Rule> = rules
         .iter()
         .filter(|rule| {
-            // Check glob/alwaysApply criteria only
+            // Include rules with no globs or empty globs
+            // These apply to root regardless of when clause
             // When clause filtering happens per-target in build
-            if rule.frontmatter.always_apply == Some(true) {
-                true
-            } else if let Some(globs) = &rule.frontmatter.globs {
+            if let Some(globs) = &rule.frontmatter.globs {
                 globs.is_empty()
             } else {
-                true
+                true // No globs = applies to root
             }
         })
         .cloned()
@@ -109,9 +121,8 @@ pub fn filter_rules_for_root(rules: &[Rule], _context: &BuildContext) -> Result<
 
 /// Filter rules that apply to a specific file
 /// A rule applies if:
-/// - alwaysApply is true, OR
-/// - The file matches one of the rule's glob patterns
-///   Additionally, rules are filtered by context (when clause)
+/// - Context matches (no when clause = always matches context)
+/// - AND either: no globs/empty globs OR file matches glob patterns
 pub fn filter_rules_for_file(
     rules: &[Rule],
     file_path: &Path,
@@ -121,32 +132,31 @@ pub fn filter_rules_for_file(
         .iter()
         .filter(|rule| {
             // First check if context matches
+            // No when clause = always matches context
             if !context.matches_when(&rule.frontmatter.when) {
                 return false;
             }
 
-            // Always include alwaysApply rules
-            if rule.frontmatter.always_apply == Some(true) {
-                return true;
+            // Now check file/glob matching
+            // If no globs or empty globs, apply to all files
+            let Some(globs) = &rule.frontmatter.globs else {
+                return true; // No globs = applies to all files
+            };
+
+            if globs.is_empty() {
+                return true; // Empty globs = applies to all files
             }
 
-            // Check if file matches any glob pattern
-            if let Some(globs) = &rule.frontmatter.globs {
-                if globs.is_empty() {
-                    return false;
+            // Has globs - check if file matches
+            let mut builder = GlobSetBuilder::new();
+            for pattern in globs {
+                if let Ok(glob) = Glob::new(pattern) {
+                    builder.add(glob);
                 }
+            }
 
-                // Build globset for this rule
-                let mut builder = GlobSetBuilder::new();
-                for pattern in globs {
-                    if let Ok(glob) = Glob::new(pattern) {
-                        builder.add(glob);
-                    }
-                }
-
-                if let Ok(globset) = builder.build() {
-                    return globset.is_match(file_path);
-                }
+            if let Ok(globset) = builder.build() {
+                return globset.is_match(file_path);
             }
 
             false
@@ -188,15 +198,28 @@ pub fn plan_outputs(
 
         // Note: when clause filtering (including target) is done later per-target output
 
-        // Check if we should simplify to common parent
-        let simplify = rule.frontmatter.simplify_globs_to_parent.unwrap_or(true);
+        // Determine output strategy using outputIn field
+        let strategy = rule.frontmatter.get_output_strategy();
 
-        let dirs = if simplify {
-            // Find common parent directory
-            find_common_parent_directory(globs)
-        } else {
-            // Find all directories that match the globs
-            find_matching_directories(project_root, globs)?
+        let dirs = match strategy.as_str() {
+            "common-parent" => {
+                // Find common parent directory across all glob matches
+                find_common_parent_directory(globs)
+            }
+            "parent" => {
+                // Find all directories that contain matching files
+                find_matching_directories(project_root, globs)?
+            }
+            "matched" => {
+                // For directory globs (trailing slash), output IN the matched directory
+                // For file globs, fall back to parent
+                find_matched_or_parent_directories(project_root, globs)?
+            }
+            _ => {
+                // Unknown strategy, fall back to parent
+                eprintln!("Warning: Unknown outputIn value '{}', using 'parent'", strategy);
+                find_matching_directories(project_root, globs)?
+            }
         };
 
         for dir in dirs {
@@ -211,7 +234,7 @@ pub fn plan_outputs(
 }
 
 /// Find common parent directory from glob patterns
-/// Used when simplifyGlobsToParent is true
+/// Used when outputIn is "common-parent"
 fn find_common_parent_directory(globs: &[String]) -> HashSet<PathBuf> {
     if globs.is_empty() {
         return HashSet::new();
@@ -312,6 +335,89 @@ fn find_matching_directories(project_root: &Path, globs: &[String]) -> Result<Ha
     Ok(directories)
 }
 
+/// Find matched directories (for trailing slash globs) or parent directories (for file globs)
+/// This implements the "matched" output strategy
+fn find_matched_or_parent_directories(project_root: &Path, globs: &[String]) -> Result<HashSet<PathBuf>> {
+    use walkdir::WalkDir;
+
+    let mut directories = HashSet::new();
+
+    for pattern in globs {
+        // Check if this is a directory glob (trailing slash)
+        let is_dir_glob = pattern.ends_with('/');
+
+        if is_dir_glob {
+            // Directory glob - find directories matching the pattern
+            let dir_pattern = pattern.trim_end_matches('/');
+            let glob = Glob::new(dir_pattern)?;
+
+            for entry in WalkDir::new(project_root)
+                .follow_links(false)
+                .into_iter()
+                .filter_entry(|e| {
+                    if e.path() == project_root {
+                        return true;
+                    }
+                    let name = e.file_name().to_string_lossy();
+                    !name.starts_with('.')
+                        && name != "node_modules"
+                        && name != "target"
+                        && name != "dist"
+                })
+                .filter_map(|e| e.ok())
+            {
+                if !entry.file_type().is_dir() {
+                    continue;
+                }
+
+                let rel_path = entry.path().strip_prefix(project_root)
+                    .unwrap_or(entry.path());
+
+                if glob.compile_matcher().is_match(rel_path) {
+                    directories.insert(rel_path.to_path_buf());
+                }
+            }
+        } else {
+            // File glob - fall back to parent strategy
+            let glob = Glob::new(pattern)?;
+            let globset = GlobSetBuilder::new().add(glob).build()?;
+
+            for entry in WalkDir::new(project_root)
+                .follow_links(false)
+                .into_iter()
+                .filter_entry(|e| {
+                    if e.path() == project_root {
+                        return true;
+                    }
+                    let name = e.file_name().to_string_lossy();
+                    !name.starts_with('.')
+                        && name != "node_modules"
+                        && name != "target"
+                        && name != "dist"
+                })
+                .filter_map(|e| e.ok())
+            {
+                if !entry.file_type().is_file() {
+                    continue;
+                }
+
+                let rel_path = entry.path().strip_prefix(project_root)
+                    .unwrap_or(entry.path());
+
+                if globset.is_match(rel_path) {
+                    if let Some(parent) = rel_path.parent() {
+                        directories.insert(parent.to_path_buf());
+                    } else {
+                        directories.insert(PathBuf::from("."));
+                    }
+                }
+            }
+        }
+    }
+
+    Ok(directories)
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -319,45 +425,11 @@ mod tests {
     use std::path::PathBuf;
 
     #[test]
-    fn test_filter_always_apply() {
+    fn test_filter_root_excludes_rules_with_globs() {
         let ctx = BuildContext::new(None, None, None);
         let rule = Rule {
             frontmatter: RuleFrontmatter {
-                always_apply: Some(true),
-                globs: Some(vec!["**/*.ts".to_string()]),
-                ..Default::default()
-            },
-            body: "test".to_string(),
-            path: PathBuf::from("test.md"),
-        };
-
-        let filtered = filter_rules_for_root(&[rule], &ctx).unwrap();
-        assert_eq!(filtered.len(), 1);
-    }
-
-    #[test]
-    fn test_filter_no_globs() {
-        let ctx = BuildContext::new(None, None, None);
-        let rule = Rule {
-            frontmatter: RuleFrontmatter {
-                always_apply: None,
-                globs: None,
-                ..Default::default()
-            },
-            body: "test".to_string(),
-            path: PathBuf::from("test.md"),
-        };
-
-        let filtered = filter_rules_for_root(&[rule], &ctx).unwrap();
-        assert_eq!(filtered.len(), 1);
-    }
-
-    #[test]
-    fn test_filter_with_globs() {
-        let ctx = BuildContext::new(None, None, None);
-        let rule = Rule {
-            frontmatter: RuleFrontmatter {
-                always_apply: None,
+                when: None,
                 globs: Some(vec!["**/*.ts".to_string()]),
                 ..Default::default()
             },
@@ -370,17 +442,12 @@ mod tests {
     }
 
     #[test]
-    fn test_filter_env_match() {
-        let ctx = BuildContext::new(Some("cloud".to_string()), None, None);
+    fn test_filter_no_globs() {
+        let ctx = BuildContext::new(None, None, None);
         let rule = Rule {
             frontmatter: RuleFrontmatter {
-                always_apply: Some(true),
-                when: Some(crate::model::When {
-                    env: Some(vec!["cloud".to_string(), "prod".to_string()]),
-                    role: None,
-                    language: None,
-                    target: None,
-                }),
+                when: None,
+                globs: None,
                 ..Default::default()
             },
             body: "test".to_string(),
@@ -388,8 +455,52 @@ mod tests {
         };
 
         let filtered = filter_rules_for_root(&[rule], &ctx).unwrap();
-        // filter_rules_for_root now only checks globs/alwaysApply
-        assert_eq!(filtered.len(), 1, "Should include rule (when filtering deferred to build)");
+        assert_eq!(filtered.len(), 1);
+    }
+
+    #[test]
+    fn test_filter_with_globs_and_when_clause() {
+        let ctx = BuildContext::new(None, None, None);
+        let rule = Rule {
+            frontmatter: RuleFrontmatter {
+                when: Some(crate::model::When::legacy(
+                    Some(vec!["prod".to_string()]),
+                    None,
+                    None,
+                    None,
+                )),
+                globs: Some(vec!["**/*.ts".to_string()]),
+                ..Default::default()
+            },
+            body: "test".to_string(),
+            path: PathBuf::from("test.md"),
+        };
+
+        let filtered = filter_rules_for_root(&[rule], &ctx).unwrap();
+        assert_eq!(filtered.len(), 0, "Rules with globs and when clause should not apply to root");
+    }
+
+    #[test]
+    fn test_filter_root_includes_rules_with_when_but_no_globs() {
+        let ctx = BuildContext::new(Some("cloud".to_string()), None, None);
+        let rule = Rule {
+            frontmatter: RuleFrontmatter {
+                when: Some(crate::model::When::legacy(
+                    Some(vec!["cloud".to_string(), "prod".to_string()]),
+                    None,
+                    None,
+                    None,
+                )),
+                globs: None,
+                ..Default::default()
+            },
+            body: "test".to_string(),
+            path: PathBuf::from("test.md"),
+        };
+
+        let filtered = filter_rules_for_root(&[rule], &ctx).unwrap();
+        // filter_rules_for_root includes rules without globs (when filtering deferred to build)
+        assert_eq!(filtered.len(), 1, "Should include rule without globs");
     }
 
     #[test]
@@ -397,28 +508,28 @@ mod tests {
         // This test now verifies matches_when directly since filter_rules_for_root
         // no longer does when clause filtering
         let ctx = BuildContext::new(Some("local".to_string()), None, None);
-        let when_clause = Some(crate::model::When {
-            env: Some(vec!["cloud".to_string(), "prod".to_string()]),
-            role: None,
-            language: None,
-            target: None,
-        });
+        let when_clause = Some(crate::model::When::legacy(
+            Some(vec!["cloud".to_string(), "prod".to_string()]),
+            None,
+            None,
+            None,
+        ));
 
         assert!(!ctx.matches_when(&when_clause), "Should not match when env not in list");
     }
 
     #[test]
-    fn test_filter_role_match() {
+    fn test_filter_root_with_role_when_clause_no_globs() {
         let ctx = BuildContext::new(None, Some("backend".to_string()), None);
         let rule = Rule {
             frontmatter: RuleFrontmatter {
-                always_apply: Some(true),
-                when: Some(crate::model::When {
-                    env: None,
-                    role: Some(vec!["backend".to_string(), "fullstack".to_string()]),
-                    language: None,
-                    target: None,
-                }),
+                when: Some(crate::model::When::legacy(
+                    None,
+                    Some(vec!["backend".to_string(), "fullstack".to_string()]),
+                    None,
+                    None,
+                )),
+                globs: None,
                 ..Default::default()
             },
             body: "test".to_string(),
@@ -426,21 +537,21 @@ mod tests {
         };
 
         let filtered = filter_rules_for_root(&[rule], &ctx).unwrap();
-        assert_eq!(filtered.len(), 1, "Should match when role is in list");
+        assert_eq!(filtered.len(), 1, "Should include rule with when clause but no globs");
     }
 
     #[test]
-    fn test_filter_language_match() {
+    fn test_filter_root_with_language_when_clause_no_globs() {
         let ctx = BuildContext::new(None, None, Some("rust".to_string()));
         let rule = Rule {
             frontmatter: RuleFrontmatter {
-                always_apply: Some(true),
-                when: Some(crate::model::When {
-                    env: None,
-                    role: None,
-                    target: None,
-                    language: Some(vec!["rust".to_string(), "typescript".to_string()]),
-                }),
+                when: Some(crate::model::When::legacy(
+                    None,
+                    None,
+                    Some(vec!["rust".to_string(), "typescript".to_string()]),
+                    None,
+                )),
+                globs: None,
                 ..Default::default()
             },
             body: "test".to_string(),
@@ -448,11 +559,11 @@ mod tests {
         };
 
         let filtered = filter_rules_for_root(&[rule], &ctx).unwrap();
-        assert_eq!(filtered.len(), 1, "Should match when language is in list");
+        assert_eq!(filtered.len(), 1, "Should include rule with when clause but no globs");
     }
 
     #[test]
-    fn test_filter_multiple_when_all_match() {
+    fn test_filter_root_with_multiple_when_no_globs() {
         let ctx = BuildContext::new(
             Some("cloud".to_string()),
             Some("backend".to_string()),
@@ -460,13 +571,13 @@ mod tests {
         );
         let rule = Rule {
             frontmatter: RuleFrontmatter {
-                always_apply: Some(true),
-                when: Some(crate::model::When {
-                    env: Some(vec!["cloud".to_string()]),
-                    role: Some(vec!["backend".to_string()]),
-                    target: None,
-                    language: Some(vec!["rust".to_string()]),
-                }),
+                when: Some(crate::model::When::legacy(
+                    Some(vec!["cloud".to_string()]),
+                    Some(vec!["backend".to_string()]),
+                    Some(vec!["rust".to_string()]),
+                    None,
+                )),
+                globs: None,
                 ..Default::default()
             },
             body: "test".to_string(),
@@ -474,8 +585,8 @@ mod tests {
         };
 
         let filtered = filter_rules_for_root(&[rule], &ctx).unwrap();
-        // filter_rules_for_root now only checks globs/alwaysApply
-        assert_eq!(filtered.len(), 1, "Should include rule (when filtering deferred to build)");
+        // filter_rules_for_root includes rules without globs (when filtering deferred to build)
+        assert_eq!(filtered.len(), 1, "Should include rule without globs");
     }
 
     #[test]
@@ -486,12 +597,12 @@ mod tests {
             Some("frontend".to_string()),
             Some("rust".to_string()),
         );
-        let when_clause = Some(crate::model::When {
-            env: Some(vec!["cloud".to_string()]),
-            role: Some(vec!["backend".to_string()]),
-            language: Some(vec!["rust".to_string()]),
-            target: None,
-        });
+        let when_clause = Some(crate::model::When::legacy(
+            Some(vec!["cloud".to_string()]),
+            Some(vec!["backend".to_string()]),
+            Some(vec!["rust".to_string()]),
+            None,
+        ));
 
         assert!(!ctx.matches_when(&when_clause), "Should not match when any when condition fails");
     }
@@ -501,7 +612,7 @@ mod tests {
         let ctx = BuildContext::new(None, None, None);
         let rule = Rule {
             frontmatter: RuleFrontmatter {
-                always_apply: None,
+                when: None,
                 globs: Some(vec!["**/*.rs".to_string()]),
                 ..Default::default()
             },
@@ -511,7 +622,7 @@ mod tests {
 
         let file_path = PathBuf::from("src/main.rs");
         let filtered = filter_rules_for_file(&[rule], &file_path, &ctx).unwrap();
-        assert_eq!(filtered.len(), 1, "Should match file with glob pattern");
+        assert_eq!(filtered.len(), 1, "Should match file when glob pattern matches");
     }
 
     #[test]
@@ -519,7 +630,7 @@ mod tests {
         let ctx = BuildContext::new(None, None, None);
         let rule = Rule {
             frontmatter: RuleFrontmatter {
-                always_apply: None,
+                when: None,
                 globs: Some(vec!["**/*.ts".to_string()]),
                 ..Default::default()
             },
@@ -529,16 +640,16 @@ mod tests {
 
         let file_path = PathBuf::from("src/main.rs");
         let filtered = filter_rules_for_file(&[rule], &file_path, &ctx).unwrap();
-        assert_eq!(filtered.len(), 0, "Should not match file with non-matching glob");
+        assert_eq!(filtered.len(), 0, "Should not match when glob pattern doesn't match");
     }
 
     #[test]
-    fn test_filter_rules_for_file_with_always_apply() {
+    fn test_filter_rules_for_file_without_when_or_globs() {
         let ctx = BuildContext::new(None, None, None);
         let rule = Rule {
             frontmatter: RuleFrontmatter {
-                always_apply: Some(true),
-                globs: Some(vec!["**/*.ts".to_string()]),
+                when: None,
+                globs: None,
                 ..Default::default()
             },
             body: "test".to_string(),
@@ -547,7 +658,7 @@ mod tests {
 
         let file_path = PathBuf::from("src/main.rs");
         let filtered = filter_rules_for_file(&[rule], &file_path, &ctx).unwrap();
-        assert_eq!(filtered.len(), 1, "Should match any file when alwaysApply is true");
+        assert_eq!(filtered.len(), 1, "Should match any file when no when clause and no globs");
     }
 
     #[test]
@@ -555,14 +666,13 @@ mod tests {
         let ctx = BuildContext::new(Some("prod".to_string()), None, None);
         let rule = Rule {
             frontmatter: RuleFrontmatter {
-                always_apply: None,
                 globs: Some(vec!["**/*.rs".to_string()]),
-                when: Some(crate::model::When {
-                    env: Some(vec!["dev".to_string()]),
-                    role: None,
-                    language: None,
-                    target: None,
-                }),
+                when: Some(crate::model::When::legacy(
+                    Some(vec!["dev".to_string()]),
+                    None,
+                    None,
+                    None,
+                )),
                 ..Default::default()
             },
             body: "test".to_string(),
@@ -572,5 +682,64 @@ mod tests {
         let file_path = PathBuf::from("src/main.rs");
         let filtered = filter_rules_for_file(&[rule], &file_path, &ctx).unwrap();
         assert_eq!(filtered.len(), 0, "Should not match when when clause doesn't match context");
+    }
+
+    #[test]
+    fn test_filter_with_arbitrary_variable_in_when_clause() {
+        use std::collections::HashMap;
+
+        // Create context with arbitrary variables (using the new variable map approach)
+        let mut variables = HashMap::new();
+        variables.insert("app_env".to_string(), "production".to_string());
+        variables.insert("region".to_string(), "us-west".to_string());
+
+        let ctx = BuildContext::from_variables(variables);
+
+        // Rule that requires app_env=production
+        let mut when_vars = HashMap::new();
+        when_vars.insert("app_env".to_string(), vec!["production".to_string(), "staging".to_string()]);
+
+        let rule = Rule {
+            frontmatter: RuleFrontmatter {
+                globs: Some(vec!["**/*.rs".to_string()]),
+                when: Some(crate::model::When::from_variables(when_vars)),
+                ..Default::default()
+            },
+            body: "test".to_string(),
+            path: PathBuf::from("test.md"),
+        };
+
+        let file_path = PathBuf::from("src/main.rs");
+        let filtered = filter_rules_for_file(&[rule], &file_path, &ctx).unwrap();
+        assert_eq!(filtered.len(), 1, "Should match when app_env variable matches and file matches glob");
+    }
+
+    #[test]
+    fn test_filter_with_arbitrary_variable_no_match() {
+        use std::collections::HashMap;
+
+        // Create context with arbitrary variables
+        let mut variables = HashMap::new();
+        variables.insert("app_env".to_string(), "development".to_string());
+
+        let ctx = BuildContext::from_variables(variables);
+
+        // Rule that requires app_env=production or staging
+        let mut when_vars = HashMap::new();
+        when_vars.insert("app_env".to_string(), vec!["production".to_string(), "staging".to_string()]);
+
+        let rule = Rule {
+            frontmatter: RuleFrontmatter {
+                globs: Some(vec!["**/*.rs".to_string()]),
+                when: Some(crate::model::When::from_variables(when_vars)),
+                ..Default::default()
+            },
+            body: "test".to_string(),
+            path: PathBuf::from("test.md"),
+        };
+
+        let file_path = PathBuf::from("src/main.rs");
+        let filtered = filter_rules_for_file(&[rule], &file_path, &ctx).unwrap();
+        assert_eq!(filtered.len(), 0, "Should not match when app_env variable doesn't match");
     }
 }

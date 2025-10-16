@@ -69,7 +69,6 @@ Use idiomatic Rust.
     let global_template = templates_dir.child("agents-root.md");
     global_template.write_str(r#"---
 name: "global-rules"
-alwaysApply: true
 order: 1
 ---
 # Global Rules
@@ -127,7 +126,6 @@ project = "test-project"
     let template = templates_dir.child("agents-root.md");
     template.write_str(r#"---
 name: "global"
-alwaysApply: true
 ---
 # Rules
 "#).unwrap();
@@ -186,7 +184,6 @@ engine = """command:{}"""
     let template = templates_dir.child("agents-root.md");
     template.write_str(r#"---
 name: "test"
-alwaysApply: true
 ---
 # Rules
 "#).unwrap();

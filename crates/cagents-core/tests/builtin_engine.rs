@@ -31,7 +31,6 @@ owner = "Alice"
     template.write_str(
         r#"---
 name: test-template
-alwaysApply: true
 ---
 # {{project}} - Rules
 
@@ -46,7 +45,7 @@ This is a test project.
     std::env::set_current_dir(temp.path())?;
 
     // Run build
-    let result = cmd_build(None, None, None, None, false);
+    let result = cmd_build(None, false);
 
     // Restore directory
     std::env::set_current_dir(&original_dir)?;
@@ -91,7 +90,6 @@ project = "TestProject"
     template.write_str(
         r#"---
 name: test
-alwaysApply: true
 ---
 # {{project}}
 Owner: {{undefined_var}}
@@ -103,7 +101,7 @@ Owner: {{undefined_var}}
     std::env::set_current_dir(temp.path())?;
 
     // Run build - should FAIL
-    let result = cmd_build(None, None, None, None, false);
+    let result = cmd_build(None, false);
 
     // Restore directory
     std::env::set_current_dir(&original_dir)?;
@@ -147,7 +145,6 @@ active = true
     template.write_str(
         r#"---
 name: test
-alwaysApply: true
 ---
 Project: {{project}}
 Version: {{version}}
@@ -160,7 +157,7 @@ Active: {{active}}
     std::env::set_current_dir(temp.path())?;
 
     // Run build
-    let result = cmd_build(None, None, None, None, false);
+    let result = cmd_build(None, false);
 
     // Restore directory
     std::env::set_current_dir(&original_dir)?;

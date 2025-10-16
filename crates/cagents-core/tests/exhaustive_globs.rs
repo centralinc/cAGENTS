@@ -24,7 +24,7 @@ fn test_glob_single_extension() {
         frontmatter: RuleFrontmatter {
             name: Some("rust".to_string()),
             globs: Some(vec!["**/*.rs".to_string()]),
-            simplify_globs_to_parent: Some(false),
+            output_in: Some("parent".to_string()),
             ..Default::default()
         },
         body: "Rust rules".to_string(),
@@ -53,7 +53,7 @@ fn test_glob_multiple_extensions() {
         frontmatter: RuleFrontmatter {
             name: Some("typescript".to_string()),
             globs: Some(vec!["**/*.ts".to_string(), "**/*.tsx".to_string()]),
-            simplify_globs_to_parent: Some(false),
+            output_in: Some("parent".to_string()),
             ..Default::default()
         },
         body: "TS rules".to_string(),
@@ -81,7 +81,7 @@ fn test_glob_directory_pattern() {
         frontmatter: RuleFrontmatter {
             name: Some("packages".to_string()),
             globs: Some(vec!["packages/**".to_string()]),
-            simplify_globs_to_parent: Some(false),
+            output_in: Some("parent".to_string()),
             ..Default::default()
         },
         body: "Package rules".to_string(),
@@ -109,7 +109,7 @@ fn test_glob_nested_directories() {
         frontmatter: RuleFrontmatter {
             name: Some("tsx".to_string()),
             globs: Some(vec!["**/*.tsx".to_string()]),
-            simplify_globs_to_parent: Some(false),
+            output_in: Some("parent".to_string()),
             ..Default::default()
         },
         body: "TSX rules".to_string(),
@@ -135,7 +135,7 @@ fn test_glob_no_match() {
         frontmatter: RuleFrontmatter {
             name: Some("python".to_string()),
             globs: Some(vec!["**/*.py".to_string()]),
-            simplify_globs_to_parent: Some(false),
+            output_in: Some("parent".to_string()),
             ..Default::default()
         },
         body: "Python rules".to_string(),
@@ -164,7 +164,7 @@ fn test_glob_multiple_rules_same_directory() {
             name: Some("rust1".to_string()),
             globs: Some(vec!["**/*.rs".to_string()]),
             order: Some(1),
-            simplify_globs_to_parent: Some(false),
+            output_in: Some("parent".to_string()),
             ..Default::default()
         },
         body: "Rust rule 1".to_string(),
@@ -176,7 +176,7 @@ fn test_glob_multiple_rules_same_directory() {
             name: Some("rust2".to_string()),
             globs: Some(vec!["**/*.rs".to_string()]),
             order: Some(2),
-            simplify_globs_to_parent: Some(false),
+            output_in: Some("parent".to_string()),
             ..Default::default()
         },
         body: "Rust rule 2".to_string(),
@@ -205,7 +205,7 @@ fn test_glob_specific_directory() {
         frontmatter: RuleFrontmatter {
             name: Some("src-only".to_string()),
             globs: Some(vec!["src/**".to_string()]),
-            simplify_globs_to_parent: Some(false),
+            output_in: Some("parent".to_string()),
             ..Default::default()
         },
         body: "Src rules".to_string(),
@@ -239,7 +239,7 @@ fn test_glob_exclude_directories() {
         frontmatter: RuleFrontmatter {
             name: Some("rust".to_string()),
             globs: Some(vec!["**/*.rs".to_string()]),
-            simplify_globs_to_parent: Some(false),
+            output_in: Some("parent".to_string()),
             ..Default::default()
         },
         body: "Rust rules".to_string(),
@@ -270,7 +270,7 @@ fn test_glob_case_sensitivity() {
         frontmatter: RuleFrontmatter {
             name: Some("rust".to_string()),
             globs: Some(vec!["**/*.rs".to_string()]),
-            simplify_globs_to_parent: Some(false),
+            output_in: Some("parent".to_string()),
             ..Default::default()
         },
         body: "Rust rules".to_string(),

@@ -1,7 +1,6 @@
 ---
 name: project-meta
 description: Project metadata and ownership
-alwaysApply: true
 order: 5
 ---
 # Project Context

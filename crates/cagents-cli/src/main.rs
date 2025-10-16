@@ -23,9 +23,6 @@ enum Command {
     },
     /// Build AGENTS.md (and optional exports) for all targets
     Build {
-        #[arg(long)] env: Option<String>,
-        #[arg(long)] role: Option<String>,
-        #[arg(long)] language: Option<String>,
         #[arg(long)] out: Option<String>,
         #[arg(long)] dry_run: bool,
     },
@@ -92,7 +89,7 @@ fn main() -> Result<()> {
     let cli = Cli::parse();
     match cli.cmd {
         Command::Init{preset, force, dry_run, backup} => cagents_core::cmd_init(&preset, force, dry_run, backup)?,
-        Command::Build{env,role,language,out,dry_run} => cagents_core::cmd_build(env, role, language, out, dry_run)?,
+        Command::Build{out,dry_run} => cagents_core::cmd_build(out, dry_run)?,
         Command::Export{target} => cagents_core::cmd_export(&target)?,
         Command::Lint => cagents_core::cmd_lint()?,
         Command::Preview{path} => cagents_core::cmd_preview(&path)?,

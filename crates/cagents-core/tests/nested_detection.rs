@@ -71,14 +71,15 @@ fn test_migrate_multiple_creates_templates_with_globs() {
     assert!(PathBuf::from(".cAGENTS/templates/agents-src.md").exists());
     assert!(PathBuf::from(".cAGENTS/templates/agents-tests.md").exists());
 
-    // Check root template has alwaysApply
+    // Check root template was created (no when clause = implicitly always applies)
     let root = fs::read_to_string(".cAGENTS/templates/agents-root.md").unwrap();
-    assert!(root.contains("alwaysApply: true"));
+    assert!(!root.contains("alwaysApply"), "alwaysApply field has been removed");
 
-    // After fix: All migrated templates use alwaysApply (no globs) to avoid nested outputs
+    // Migrated templates don't have globs or when clauses to avoid nested outputs
     let src = fs::read_to_string(".cAGENTS/templates/agents-src.md").unwrap();
-    assert!(src.contains("alwaysApply: true"));
-    assert!(!src.contains("globs:"), "Should not have globs - uses alwaysApply instead");
+    assert!(!src.contains("alwaysApply"), "alwaysApply field has been removed");
+    assert!(!src.contains("globs:"), "Should not have globs - no when clause means always apply");
+    assert!(!src.contains("when:"), "Should not have when clause - implicitly always apply");
 
     // Check templates preserve content
     assert!(root.contains("Root content"));

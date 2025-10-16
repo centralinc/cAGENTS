@@ -6,7 +6,7 @@ use tempfile::TempDir;
 
 #[test]
 #[serial]
-fn test_simplify_globs_to_parent_enabled() {
+fn test_output_in_common_parent() {
     let temp = TempDir::new().unwrap();
     let _guard = ChangeDir::new(temp.path());
 
@@ -20,7 +20,7 @@ fn test_simplify_globs_to_parent_enabled() {
     fs::write("src/db/migrations.int.ts", "test").unwrap();
     fs::write("src/cache/redis.int.ts", "test").unwrap();
 
-    // Create a rule with multiple globs and simplifyGlobsToParent: true
+    // Create a rule with multiple globs and outputIn: common-parent
     let rule = loader::Rule {
         frontmatter: model::RuleFrontmatter {
             name: Some("integration-tests".to_string()),
@@ -29,8 +29,7 @@ fn test_simplify_globs_to_parent_enabled() {
                 "src/db/**/*.int.ts".to_string(),
                 "src/cache/**/*.int.ts".to_string(),
             ]),
-            simplify_globs_to_parent: Some(true),
-            always_apply: None,
+            output_in: Some("common-parent".to_string()),
             ..Default::default()
         },
         body: "# Integration Test Rules".to_string(),
@@ -53,7 +52,7 @@ fn test_simplify_globs_to_parent_enabled() {
 
 #[test]
 #[serial]
-fn test_simplify_globs_to_parent_disabled() {
+fn test_output_in_parent() {
     let temp = TempDir::new().unwrap();
     let _guard = ChangeDir::new(temp.path());
 
@@ -65,7 +64,7 @@ fn test_simplify_globs_to_parent_disabled() {
     fs::write("src/api/test.ts", "test").unwrap();
     fs::write("src/db/test.ts", "test").unwrap();
 
-    // Create a rule with simplifyGlobsToParent: false
+    // Create a rule with outputIn: parent
     let rule = loader::Rule {
         frontmatter: model::RuleFrontmatter {
             name: Some("services".to_string()),
@@ -73,8 +72,7 @@ fn test_simplify_globs_to_parent_disabled() {
                 "src/api/**/*.ts".to_string(),
                 "src/db/**/*.ts".to_string(),
             ]),
-            simplify_globs_to_parent: Some(false),
-            always_apply: None,
+            output_in: Some("parent".to_string()),
             ..Default::default()
         },
         body: "# Rules".to_string(),
@@ -88,12 +86,12 @@ fn test_simplify_globs_to_parent_disabled() {
     assert!(outputs.len() >= 2, "Should have multiple outputs");
     assert!(outputs.contains_key(&PathBuf::from("src/api")) ||
             outputs.contains_key(&PathBuf::from("src/db")),
-        "Should output to subdirectories when simplify disabled");
+        "Should output to subdirectories when using parent strategy");
 }
 
 #[test]
 #[serial]
-fn test_default_simplify_globs_is_true() {
+fn test_default_output_in_is_common_parent() {
     let temp = TempDir::new().unwrap();
     let _guard = ChangeDir::new(temp.path());
 
@@ -102,7 +100,7 @@ fn test_default_simplify_globs_is_true() {
     fs::write("components/Button/index.tsx", "test").unwrap();
     fs::write("components/Form/index.tsx", "test").unwrap();
 
-    // Rule without simplifyGlobsToParent field (should default to true)
+    // Rule without outputIn field (should default to common-parent)
     let rule = loader::Rule {
         frontmatter: model::RuleFrontmatter {
             name: Some("components".to_string()),
@@ -110,8 +108,7 @@ fn test_default_simplify_globs_is_true() {
                 "components/Button/**/*.tsx".to_string(),
                 "components/Form/**/*.tsx".to_string(),
             ]),
-            simplify_globs_to_parent: None, // Default should be true
-            always_apply: None,
+            output_in: None, // Default should be common-parent
             ..Default::default()
         },
         body: "# Component Rules".to_string(),
@@ -121,9 +118,9 @@ fn test_default_simplify_globs_is_true() {
     let context = planner::BuildContext::new(None, None, None);
     let outputs = planner::plan_outputs(&[rule], &context, &PathBuf::from(".")).unwrap();
 
-    // Should simplify to common parent by default
+    // Should default to common parent
     assert!(outputs.contains_key(&PathBuf::from("components")),
-        "Should default to simplifying to parent");
+        "Should default to common-parent strategy");
 }
 
 /// Helper to change directory and restore on drop

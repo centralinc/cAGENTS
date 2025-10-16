@@ -19,7 +19,8 @@
     "fmt": "pnpm -r run fmt",
     "changeset": "changeset",
     "version": "changeset version && node scripts/sync-versions.js",
-    "release": "pnpm build && changeset publish"
+    "release": "pnpm build && changeset publish",
+    "postinstall": "pnpm cagents build"
   },
   "devDependencies": {
     "@changesets/cli": "^2.29.7",

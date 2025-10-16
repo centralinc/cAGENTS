@@ -55,7 +55,7 @@ print(json.dumps({"content": template}))
     fs::write(".cAGENTS/config.toml", config_with_test_engine).unwrap();
 
     // Build
-    cmd_build(None, None, None, None, false).unwrap();
+    cmd_build(None, false).unwrap();
 
     // Debug: Show what was created and what glob pattern was used
     println!("\n=== Glob pattern in template ===");

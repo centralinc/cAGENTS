@@ -1,18 +1,26 @@
 // Import from various rule formats (Cursor, Claude)
 
-use anyhow::Result;
+use anyhow::{Context, Result};
 use std::fs;
 use std::path::PathBuf;
 
-/// Import from .cursorrules file (legacy Cursor format)
+/// Import from .cursorrules file(s) (legacy Cursor format) - supports nested files
 pub fn import_cursorrules(backup: bool) -> Result<()> {
-    let cursorrules = PathBuf::from(".cursorrules");
+    // Find all .cursorrules files
+    let locations = find_all_files_named(".cursorrules");
 
-    if !cursorrules.exists() {
-        anyhow::bail!(".cursorrules file not found");
+    if locations.is_empty() {
+        anyhow::bail!("No .cursorrules files found");
     }
 
-    let content = fs::read_to_string(&cursorrules)?;
+    // Handle multiple files
+    if locations.len() > 1 {
+        println!("▸ Found {} .cursorrules files:", locations.len());
+        for loc in &locations {
+            println!("   - {}", loc.display());
+        }
+        println!();
+    }
 
     // Create cAGENTS structure
     let cagents_dir = PathBuf::from(".cAGENTS");
@@ -34,37 +42,72 @@ project = "imported-from-cursor"
 "#;
     fs::write(cagents_dir.join("config.toml"), config)?;
 
-    // Convert .cursorrules to template (new naming)
-    let template = format!(r#"---
-name: agents-cursor
-description: Imported from .cursorrules
-targets: ["agentsmd", "cursor"]
-order: 1
----
-{}
-"#, content);
+    // Import each .cursorrules file
+    let mut created_templates = Vec::new();
 
-    fs::write(templates_dir.join("agents-cursor.md"), template)?;
-    fs::write(cagents_dir.join(".gitignore"), "config.local.toml\n**.local.*\n.output-cache\n")?;
+    for (idx, location) in locations.iter().enumerate() {
+        // Backup (if requested)
+        if backup {
+            let backup_path = location.with_extension("cursorrules.backup");
+            if let Err(e) = fs::copy(location, &backup_path) {
+                eprintln!("▸ Failed to backup {}: {}", location.display(), e);
+            } else {
+                println!("▸ Backed up: {} → {}", location.display(), backup_path.display());
+            }
+        }
 
-    // Backup original (if requested)
-    if backup {
-        fs::copy(&cursorrules, ".cursorrules.backup")?;
-        println!("Backup:");
-        println!("  .cursorrules → .cursorrules.backup");
-        println!();
+        // Read content
+        let content = fs::read_to_string(location)
+            .with_context(|| format!("Failed to read {}", location.display()))?;
+
+        // Generate template name from location
+        let template_name = if location == &PathBuf::from(".cursorrules") {
+            "agents-cursor-root".to_string()
+        } else {
+            location
+                .parent()
+                .and_then(|p| p.file_name())
+                .and_then(|n| n.to_str())
+                .map(|s| format!("agents-cursor-{}", s))
+                .unwrap_or_else(|| format!("agents-cursor-{}", idx))
+        };
+
+        // Create template
+        let template = format!(
+            "---\nname: {}\ndescription: Imported from {}\ntargets: [\"agentsmd\", \"cursor\"]\norder: {}\n---\n{}",
+            template_name,
+            location.display(),
+            (idx + 1) * 10,
+            content
+        );
+
+        let template_filename = format!("{}.md", template_name);
+        fs::write(templates_dir.join(&template_filename), template)?;
+        created_templates.push(template_filename);
+
+        println!("   ✓ Created template: {} (from {})", template_name, location.display());
     }
 
-    // Remove original file after successful import
-    fs::remove_file(&cursorrules).ok();
-    println!("  ✓ Removed original .cursorrules");
-    println!();
+    fs::write(cagents_dir.join(".gitignore"), "config.local.toml\n**.local.*\n.output-cache\n")?;
 
-    println!("✓ Imported .cursorrules to cAGENTS!");
+    // Remove original files after successful import
+    for location in &locations {
+        if backup {
+            let backup_path = location.with_extension("cursorrules.backup");
+            println!("  ✓ Backed up {} → {}", location.display(), backup_path.display());
+        }
+        fs::remove_file(location).ok();
+    }
+
+    println!();
+    println!("✓ Imported {} .cursorrules file(s)!", locations.len());
+    println!("  ✓ Removed {} original .cursorrules file(s)", locations.len());
     println!();
     println!("Created:");
     println!("  .cAGENTS/config.toml");
-    println!("  .cAGENTS/templates/agents-cursor.md");
+    for template in &created_templates {
+        println!("  .cAGENTS/templates/{}", template);
+    }
     println!();
 
     // Auto-run build
@@ -104,58 +147,65 @@ targets = ["agentsmd", "cursor"]
 "#;
     fs::write(cagents_dir.join("config.toml"), config)?;
 
-    // Convert each .md file to a template
+    // Convert each .md file to a template (recursively)
     let mut count = 0;
     let mut simplified_rules = Vec::new();
 
-    for entry in fs::read_dir(&rules_dir)? {
-        let entry = entry?;
-        let path = entry.path();
+    let md_files = collect_md_files_recursive(&rules_dir)?;
 
-        if path.extension().and_then(|e| e.to_str()) == Some("md") {
-            let content = fs::read_to_string(&path)?;
-            let name = path.file_stem()
+    for path in md_files {
+        let content = fs::read_to_string(&path)?;
+
+        // Generate a unique name that preserves subdirectory structure
+        let name = if let Ok(rel_path) = path.strip_prefix(&rules_dir) {
+            // Convert path like "subdir/file.md" to "subdir-file"
+            rel_path.with_extension("")
+                .to_string_lossy()
+                .replace(std::path::MAIN_SEPARATOR, "-")
+        } else {
+            path.file_stem()
                 .and_then(|s| s.to_str())
-                .unwrap_or("rule");
+                .unwrap_or("rule")
+                .to_string()
+        };
 
-            // Try to parse Cursor frontmatter to extract globs
-            let (cursor_globs, body) = parse_cursor_rule(&content);
+        // Try to parse Cursor frontmatter to extract globs
+        let (cursor_globs, body) = parse_cursor_rule(&content);
 
-            // Build our template frontmatter
-            let mut frontmatter = format!(
-                "name: {}\ndescription: Imported from Cursor\n",
-                name
-            );
+        // Build our template frontmatter
+        let mut frontmatter = format!(
+            "name: {}\ndescription: Imported from Cursor\n",
+            name
+        );
 
-            // If Cursor rule had globs, preserve them and enable simplification
-            if let Some(globs) = cursor_globs {
-                if !globs.is_empty() {
-                    frontmatter.push_str("globs:\n");
-                    for glob in &globs {
-                        frontmatter.push_str(&format!("  - \"{}\"\n", glob));
-                    }
-                    frontmatter.push_str("outputIn: common-parent\n");
-
-                    // Track for warning
-                    let common_parent = find_common_parent(&globs);
-                    if common_parent != globs {
-                        simplified_rules.push((name.to_string(), globs.clone(), common_parent));
-                    }
+        // If Cursor rule had globs, preserve them and enable simplification
+        if let Some(globs) = cursor_globs {
+            if !globs.is_empty() {
+                frontmatter.push_str("globs:\n");
+                for glob in &globs {
+                    frontmatter.push_str(&format!("  - \"{}\"\n", glob));
                 }
-                // Note: empty globs or no globs = no when clause = implicitly always apply
+                frontmatter.push_str("outputIn: common-parent\n");
+
+                // Track for warning
+                let common_parent = find_common_parent(&globs);
+                if common_parent != globs {
+                    simplified_rules.push((name.to_string(), globs.clone(), common_parent));
+                }
             }
-
-            frontmatter.push_str("targets: [\"agentsmd\", \"cursor\"]\n");
-            frontmatter.push_str(&format!("order: {}\n", (count + 1) * 10));
-
-            let template = format!("---\n{}---\n{}", frontmatter, body);
-
-            fs::write(
-                templates_dir.join(format!("agents-{}.md", name)),
-                template
-            )?;
-            count += 1;
+            // Note: empty globs or no globs = no when clause = implicitly always apply
         }
+
+        frontmatter.push_str("targets: [\"agentsmd\", \"cursor\"]\n");
+        frontmatter.push_str(&format!("order: {}\n", (count + 1) * 10));
+
+        let template = format!("---\n{}---\n{}", frontmatter, body);
+
+        fs::write(
+            templates_dir.join(format!("agents-{}.md", name)),
+            template
+        )?;
+        count += 1;
     }
 
     // Print warnings for simplified globs
@@ -273,15 +323,23 @@ pub fn detect_all_formats() -> Vec<ImportFormat> {
     formats
 }
 
-/// Import from AGENTS.md file
+/// Import from AGENTS.md file(s) - supports nested files
 pub fn import_agents_md(backup: bool) -> Result<()> {
-    let agents_md = PathBuf::from("AGENTS.md");
+    // Find all AGENTS.md files
+    let locations = find_all_files_named("AGENTS.md");
 
-    if !agents_md.exists() {
-        anyhow::bail!("AGENTS.md file not found");
+    if locations.is_empty() {
+        anyhow::bail!("No AGENTS.md files found");
     }
 
-    let content = fs::read_to_string(&agents_md)?;
+    // Handle multiple files
+    if locations.len() > 1 {
+        println!("▸ Found {} AGENTS.md files:", locations.len());
+        for loc in &locations {
+            println!("   - {}", loc.display());
+        }
+        println!();
+    }
 
     // Create cAGENTS structure
     let cagents_dir = PathBuf::from(".cAGENTS");
@@ -301,36 +359,72 @@ project = "imported-from-agents-md"
 "#;
     fs::write(cagents_dir.join("config.toml"), config)?;
 
-    // Convert AGENTS.md to template
-    let template = format!(r#"---
-name: agents-root
-description: Imported from AGENTS.md
-order: 1
----
-{}
-"#, content);
+    // Import each AGENTS.md file
+    let mut created_templates = Vec::new();
 
-    fs::write(templates_dir.join("agents-root.md"), template)?;
-    fs::write(cagents_dir.join(".gitignore"), "config.local.toml\n**.local.*\n.output-cache\n")?;
+    for (idx, location) in locations.iter().enumerate() {
+        // Backup (if requested)
+        if backup {
+            let backup_path = location.with_extension("md.backup");
+            if let Err(e) = fs::copy(location, &backup_path) {
+                eprintln!("▸ Failed to backup {}: {}", location.display(), e);
+            } else {
+                println!("▸ Backed up: {} → {}", location.display(), backup_path.display());
+            }
+        }
 
-    // Backup original (if requested)
-    if backup {
-        fs::copy(&agents_md, "AGENTS.md.backup")?;
-        println!("Backup:");
-        println!("  AGENTS.md → AGENTS.md.backup");
-        println!();
+        // Read content
+        let content = fs::read_to_string(location)
+            .with_context(|| format!("Failed to read {}", location.display()))?;
+
+        // Generate template name from location
+        let template_name = if location == &PathBuf::from("AGENTS.md") {
+            "agents-root".to_string()
+        } else {
+            location
+                .parent()
+                .and_then(|p| p.file_name())
+                .and_then(|n| n.to_str())
+                .map(|s| format!("agents-{}", s))
+                .unwrap_or_else(|| format!("agents-{}", idx))
+        };
+
+        // Create template
+        let template = format!(
+            "---\nname: {}\ndescription: Imported from {}\norder: {}\n---\n{}",
+            template_name,
+            location.display(),
+            (idx + 1) * 10,
+            content
+        );
+
+        let template_filename = format!("{}.md", template_name);
+        fs::write(templates_dir.join(&template_filename), template)?;
+        created_templates.push(template_filename);
+
+        println!("   ✓ Created template: {} (from {})", template_name, location.display());
     }
 
-    // Remove original file after successful import
-    fs::remove_file(&agents_md).ok();
-    println!("  ✓ Removed original AGENTS.md");
-    println!();
+    fs::write(cagents_dir.join(".gitignore"), "config.local.toml\n**.local.*\n.output-cache\n")?;
 
-    println!("✓ Imported AGENTS.md to cAGENTS!");
+    // Remove original files after successful import
+    for location in &locations {
+        if backup {
+            let backup_path = location.with_extension("md.backup");
+            println!("  ✓ Backed up {} → {}", location.display(), backup_path.display());
+        }
+        fs::remove_file(location).ok();
+    }
+
+    println!();
+    println!("✓ Imported {} AGENTS.md file(s)!", locations.len());
+    println!("  ✓ Removed {} original AGENTS.md file(s)", locations.len());
     println!();
     println!("Created:");
     println!("  .cAGENTS/config.toml");
-    println!("  .cAGENTS/templates/agents-root.md");
+    for template in &created_templates {
+        println!("  .cAGENTS/templates/{}", template);
+    }
     println!();
 
     // Auto-run build
@@ -345,15 +439,23 @@ order: 1
     Ok(())
 }
 
-/// Import from CLAUDE.md file
+/// Import from CLAUDE.md file(s) - supports nested files
 pub fn import_claude_md(backup: bool) -> Result<()> {
-    let claude_md = PathBuf::from("CLAUDE.md");
+    // Find all CLAUDE.md files
+    let locations = find_all_files_named("CLAUDE.md");
 
-    if !claude_md.exists() {
-        anyhow::bail!("CLAUDE.md file not found");
+    if locations.is_empty() {
+        anyhow::bail!("No CLAUDE.md files found");
     }
 
-    let content = fs::read_to_string(&claude_md)?;
+    // Handle multiple files
+    if locations.len() > 1 {
+        println!("▸ Found {} CLAUDE.md files:", locations.len());
+        for loc in &locations {
+            println!("   - {}", loc.display());
+        }
+        println!();
+    }
 
     // Create cAGENTS structure
     let cagents_dir = PathBuf::from(".cAGENTS");
@@ -373,36 +475,72 @@ project = "imported-from-claude-md"
 "#;
     fs::write(cagents_dir.join("config.toml"), config)?;
 
-    // Convert CLAUDE.md to template
-    let template = format!(r#"---
-name: agents-root
-description: Imported from CLAUDE.md
-order: 1
----
-{}
-"#, content);
+    // Import each CLAUDE.md file
+    let mut created_templates = Vec::new();
 
-    fs::write(templates_dir.join("agents-root.md"), template)?;
-    fs::write(cagents_dir.join(".gitignore"), "config.local.toml\n**.local.*\n.output-cache\n")?;
+    for (idx, location) in locations.iter().enumerate() {
+        // Backup (if requested)
+        if backup {
+            let backup_path = location.with_extension("md.backup");
+            if let Err(e) = fs::copy(location, &backup_path) {
+                eprintln!("▸ Failed to backup {}: {}", location.display(), e);
+            } else {
+                println!("▸ Backed up: {} → {}", location.display(), backup_path.display());
+            }
+        }
 
-    // Backup original (if requested)
-    if backup {
-        fs::copy(&claude_md, "CLAUDE.md.backup")?;
-        println!("Backup:");
-        println!("  CLAUDE.md → CLAUDE.md.backup");
-        println!();
+        // Read content
+        let content = fs::read_to_string(location)
+            .with_context(|| format!("Failed to read {}", location.display()))?;
+
+        // Generate template name from location
+        let template_name = if location == &PathBuf::from("CLAUDE.md") {
+            "agents-root".to_string()
+        } else {
+            location
+                .parent()
+                .and_then(|p| p.file_name())
+                .and_then(|n| n.to_str())
+                .map(|s| format!("agents-{}", s))
+                .unwrap_or_else(|| format!("agents-{}", idx))
+        };
+
+        // Create template
+        let template = format!(
+            "---\nname: {}\ndescription: Imported from {}\norder: {}\n---\n{}",
+            template_name,
+            location.display(),
+            (idx + 1) * 10,
+            content
+        );
+
+        let template_filename = format!("{}.md", template_name);
+        fs::write(templates_dir.join(&template_filename), template)?;
+        created_templates.push(template_filename);
+
+        println!("   ✓ Created template: {} (from {})", template_name, location.display());
     }
 
-    // Remove original file after successful import
-    fs::remove_file(&claude_md).ok();
-    println!("  ✓ Removed original CLAUDE.md");
-    println!();
+    fs::write(cagents_dir.join(".gitignore"), "config.local.toml\n**.local.*\n.output-cache\n")?;
 
-    println!("✓ Imported CLAUDE.md to cAGENTS!");
+    // Remove original files after successful import
+    for location in &locations {
+        if backup {
+            let backup_path = location.with_extension("md.backup");
+            println!("  ✓ Backed up {} → {}", location.display(), backup_path.display());
+        }
+        fs::remove_file(location).ok();
+    }
+
+    println!();
+    println!("✓ Imported {} CLAUDE.md file(s)!", locations.len());
+    println!("  ✓ Removed {} original CLAUDE.md file(s)", locations.len());
     println!();
     println!("Created:");
     println!("  .cAGENTS/config.toml");
-    println!("  .cAGENTS/templates/agents-root.md");
+    for template in &created_templates {
+        println!("  .cAGENTS/templates/{}", template);
+    }
     println!();
 
     // Auto-run build
@@ -489,15 +627,13 @@ project = "imported-merged"
                 (content, PathBuf::from(".cursorrules.backup"))
             }
             ImportFormat::CursorModern => {
-                // For modern cursor, concatenate all files
+                // For modern cursor, concatenate all files (recursively)
                 let mut combined = String::new();
-                for entry in fs::read_dir(&path)? {
-                    let entry = entry?;
-                    if entry.path().extension().and_then(|e| e.to_str()) == Some("md") {
-                        let file_content = fs::read_to_string(entry.path())?;
-                        combined.push_str(&file_content);
-                        combined.push_str("\n\n");
-                    }
+                let md_files = collect_md_files_recursive(&path)?;
+                for file_path in md_files {
+                    let file_content = fs::read_to_string(&file_path)?;
+                    combined.push_str(&file_content);
+                    combined.push_str("\n\n");
                 }
                 (combined, PathBuf::from(".cursor/rules.backup"))
             }
@@ -655,6 +791,29 @@ fn extract_globs_from_yaml(yaml: &str) -> Option<Vec<String>> {
     None
 }
 
+/// Recursively collect all .md files in a directory
+fn collect_md_files_recursive(dir: &std::path::Path) -> Result<Vec<PathBuf>> {
+    let mut md_files = Vec::new();
+
+    if !dir.is_dir() {
+        return Ok(md_files);
+    }
+
+    for entry in fs::read_dir(dir)? {
+        let entry = entry?;
+        let path = entry.path();
+
+        if path.is_dir() {
+            // Recursively process subdirectories
+            md_files.extend(collect_md_files_recursive(&path)?);
+        } else if path.extension().and_then(|e| e.to_str()) == Some("md") {
+            md_files.push(path);
+        }
+    }
+
+    Ok(md_files)
+}
+
 /// Find common parent directory from glob patterns
 /// Returns simplified patterns using deepest common parent
 fn find_common_parent(globs: &[String]) -> Vec<String> {
@@ -700,4 +859,48 @@ fn find_common_parent(globs: &[String]) -> Vec<String> {
         // No common parent, return original
         globs.to_vec()
     }
+}
+
+/// Find all files with a specific name recursively
+fn find_all_files_named(filename: &str) -> Vec<PathBuf> {
+    use ignore::WalkBuilder;
+
+    let mut locations = Vec::new();
+    let is_hidden_file = filename.starts_with('.');
+
+    let walker = WalkBuilder::new(".")
+        .hidden(false)
+        .git_ignore(true)
+        .git_global(true)
+        .git_exclude(true)
+        .add_custom_ignore_filename(".cagentsignore")
+        .filter_entry(move |e| {
+            if e.path() == std::path::Path::new(".") {
+                return true;
+            }
+
+            let name = e.file_name().to_string_lossy();
+            // Skip specific directories but allow hidden files if we're searching for them
+            if name == ".cAGENTS" || name == "node_modules" || name == "target" || name == "dist" {
+                return false;
+            }
+            // If we're not looking for a hidden file, skip hidden directories
+            if !is_hidden_file && name.starts_with('.') && e.file_type().map(|ft| ft.is_dir()).unwrap_or(false) {
+                return false;
+            }
+            true
+        })
+        .build();
+
+    for entry in walker.flatten() {
+        if entry.file_type().map(|ft| ft.is_file()).unwrap_or(false)
+            && entry.file_name() == filename
+        {
+            if let Ok(rel_path) = entry.path().strip_prefix(".") {
+                locations.push(rel_path.to_path_buf());
+            }
+        }
+    }
+
+    locations
 }

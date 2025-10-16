@@ -6,6 +6,7 @@ description = "Core library for cAGENTS - AGENTS.md generator with BYOC (Bring-Y
 license = "MIT"
 repository = "https://github.com/centralinc/cagents"
 homepage = "https://github.com/centralinc/cagents"
+publish = false
 
 [dependencies]
 anyhow = "1"

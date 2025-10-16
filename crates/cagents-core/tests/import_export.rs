@@ -18,12 +18,12 @@ fn test_import_cursorrules() {
 
     // Verify structure created (new naming)
     assert!(PathBuf::from(".cAGENTS/config.toml").exists());
-    assert!(PathBuf::from(".cAGENTS/templates/agents-cursor.md").exists());
+    assert!(PathBuf::from(".cAGENTS/templates/agents-cursor-root.md").exists());
     assert!(!PathBuf::from(".cursorrules.backup").exists(),
         "Should NOT create backup when backup=false");
 
     // Verify content preserved
-    let template = fs::read_to_string(".cAGENTS/templates/agents-cursor.md").unwrap();
+    let template = fs::read_to_string(".cAGENTS/templates/agents-cursor-root.md").unwrap();
     assert!(template.contains("My Cursor Rules"));
     assert!(template.contains("Use TypeScript"));
 

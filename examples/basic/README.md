@@ -41,7 +41,6 @@ The `config.toml` defines:
 ---
 name: ts-basics
 globs: ["**/*.ts", "packages/frontend/**"]
-alwaysApply: true
 order: 10
 ---
 ## TypeScript
@@ -50,7 +49,7 @@ order: 10
 - Run typecheck: `pnpm typecheck`.
 ```
 
-The `alwaysApply: true` flag means this rule appears in the root `AGENTS.md` regardless of globs.
+Note: This template has globs but no `when` clause, so it applies in all contexts (but only to files matching the globs).
 
 ## How to Run
 

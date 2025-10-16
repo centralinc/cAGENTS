@@ -1,7 +1,6 @@
 ---
 name: backend-rust
 description: Backend-specific Rust guidelines
-alwaysApply: true
 when:
   role: ["backend", "fullstack"]
   language: ["rust"]

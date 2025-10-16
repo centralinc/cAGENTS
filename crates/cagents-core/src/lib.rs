@@ -252,7 +252,7 @@ fn render_rule_with_command(
 /// M1 Slice 1 implementation:
 /// - Loads config from .cAGENTS/config.toml (no precedence yet)
 /// - Discovers templates in templatesDir
-/// - Filters rules by alwaysApply=true or globs missing/empty
+/// - Filters rules: no when clause = always applies, otherwise filtered by globs
 /// - Renders with Handlebars using static variables only
 /// - Merges by simple concatenation (no per-section strategies)
 /// - Writes single root AGENTS.md
@@ -265,9 +265,6 @@ fn render_rule_with_command(
 /// - Custom output path (--out param ignored)
 /// - Dry run mode
 pub fn cmd_build(
-    env: Option<String>,      // Filter rules by environment (e.g., "cloud", "local")
-    role: Option<String>,     // Filter rules by role (e.g., "backend", "frontend")
-    language: Option<String>, // Filter rules by language (e.g., "rust", "typescript")
     _out: Option<String>,
     _dry_run: bool,
 ) -> Result<()> {
@@ -280,56 +277,27 @@ pub fn cmd_build(
     let base_dir = PathBuf::from(".cAGENTS");
     let all_rules = loader::discover_rules(&config, &base_dir)?;
 
-    // 3. Build context from CLI args (no interactive prompts)
-    // Use provided flags or None - don't prompt for missing values
-    let context = planner::BuildContext::new(env, role, language);
+    // 3. Build template data from config variables
+    let base_data = build_template_data_map(&config);
 
-    // 4. Plan outputs (group rules by target directories)
+    // 4. Build context from config variables (for use in when clauses)
+    let mut context_variables = std::collections::HashMap::new();
+
+    // Add config variables to context (for use in when clauses)
+    for (key, value) in &base_data {
+        if let Some(s) = value.as_str() {
+            context_variables.insert(key.clone(), s.to_string());
+        }
+    }
+
+    // Create context from variables
+    let context = planner::BuildContext::from_variables(context_variables);
+
+    // 5. Plan outputs (group rules by target directories)
     let project_root = PathBuf::from(&config.paths.output_root);
     let outputs = planner::plan_outputs(&all_rules, &context, &project_root)?;
 
-    // 5. Build template data from config variables and context
-    let mut base_data = build_template_data_map(&config);
-
-    if let Some(env_value) = &context.env {
-        base_data.insert(
-            "env".to_string(),
-            serde_json::Value::String(env_value.clone()),
-        );
-    }
-    if let Some(role_value) = &context.role {
-        base_data.insert(
-            "role".to_string(),
-            serde_json::Value::String(role_value.clone()),
-        );
-    }
-    if let Some(language_value) = &context.language {
-        base_data.insert(
-            "language".to_string(),
-            serde_json::Value::String(language_value.clone()),
-        );
-    }
-
     let defaults = config.defaults.as_ref();
-
-    // 6. Cleanup old AGENTS.md files before writing new ones
-    let current_output_paths: Vec<PathBuf> = outputs.keys().cloned().collect();
-    let cleaned_count = writers::agents_md::cleanup_old_outputs(&current_output_paths)?;
-
-    if cleaned_count > 0 {
-        println!("  {} Removed {} old AGENTS.md file(s)", "✓".bright_green(), cleaned_count);
-        println!();
-    }
-
-    // 7. For each target directory, render and write AGENTS.md
-    // M8: Enhanced output with progress
-    let mut files_written = 0;
-    let total_outputs = outputs.len();
-
-    if total_outputs > 0 {
-        println!("{} {}", "▸".bright_cyan(), "Generating files...".bright_cyan());
-        println!();
-    }
 
     // Get output targets from config (default to ["agents-md"])
     let output_targets = config
@@ -338,6 +306,32 @@ pub fn cmd_build(
         .and_then(|o| o.targets.as_ref())
         .cloned()
         .unwrap_or_else(|| vec!["agents-md".to_string()]);
+
+    // 6. Cleanup old files before writing new ones
+    let current_output_paths: Vec<PathBuf> = outputs.keys().cloned().collect();
+
+    // Cleanup old AGENTS.md files from directories no longer in plan
+    let dir_cleaned_count = writers::agents_md::cleanup_old_outputs(&current_output_paths)?;
+
+    // Cleanup output files for targets that were removed from config
+    let target_cleaned_count = writers::agents_md::cleanup_old_target_files(&output_targets, &project_root)?;
+
+    let total_cleaned = dir_cleaned_count + target_cleaned_count;
+    if total_cleaned > 0 {
+        println!("  {} Removed {} old output file(s)", "✓".bright_green(), total_cleaned);
+        println!();
+    }
+
+    // 7. For each target directory, render and write target files
+    // M8: Enhanced output with progress
+    let mut files_written = 0;
+    let mut target_files_created: std::collections::HashSet<String> = std::collections::HashSet::new();
+    let total_outputs = outputs.len();
+
+    if total_outputs > 0 {
+        println!("{} {}", "▸".bright_cyan(), "Generating files...".bright_cyan());
+        println!();
+    }
 
     for (idx, (target_dir, rules)) in outputs.iter().enumerate() {
         // Show progress
@@ -350,19 +344,18 @@ pub fn cmd_build(
             );
         }
 
-        // Determine output path
+        // Determine output path and whether this is root
         let output_root = PathBuf::from(&config.paths.output_root);
         let output_dir = output_root.join(target_dir);
+        let is_root = target_dir == &PathBuf::from(".");
 
         // Write to all configured targets
         for target in &output_targets {
             // Create context with current target for filtering
-            let target_context = planner::BuildContext::with_target(
-                context.env.clone(),
-                context.role.clone(),
-                context.language.clone(),
-                target.clone()
-            );
+            // Clone all variables from the base context and add the target
+            let mut target_variables = context.variables.clone();
+            target_variables.insert("target".to_string(), target.clone());
+            let target_context = planner::BuildContext::from_variables(target_variables);
 
             // Filter rules for this specific target
             let target_rules: Vec<&loader::Rule> = rules
@@ -387,13 +380,16 @@ pub fn cmd_build(
             // Write to appropriate file
             match target.as_str() {
                 "agents-md" => {
-                    writers::agents_md::write_agents_md(&output_dir, &target_merged)?;
+                    writers::agents_md::write_agents_md(&output_dir, &target_merged, is_root)?;
+                    target_files_created.insert(target.to_string());
                 }
                 "claude-md" => {
-                    writers::claude_md::write_claude_md(&output_dir, &target_merged)?;
+                    writers::claude_md::write_claude_md(&output_dir, &target_merged, is_root)?;
+                    target_files_created.insert(target.to_string());
                 }
                 "cursorrules" => {
                     writers::cursorrules::write_cursorrules(&output_dir, &target_merged)?;
+                    target_files_created.insert(target.to_string());
                 }
                 _ => {
                     eprintln!("  Warning: Unknown output target '{}' - skipping", target);
@@ -404,22 +400,36 @@ pub fn cmd_build(
         files_written += 1;
     }
 
-    // 8. Save output tracking for future cleanup
-    if let Err(e) = writers::agents_md::save_output_tracking(&current_output_paths) {
+    // 8. Save output tracking for future cleanup (directories + targets)
+    if let Err(e) = writers::agents_md::save_full_tracking(&current_output_paths, &output_targets) {
         eprintln!("  Warning: Could not save output tracking: {}", e);
     }
 
     // M4 Slice 5: Beautiful output
     println!();
     if files_written == 0 {
-        println!("{} {}", "▸ ".yellow(), "No rules matched - no AGENTS.md files generated".yellow());
+        println!("{} {}", "▸ ".yellow(), "No rules matched - no files generated".yellow());
     } else {
         println!("{} {}", "✓".bright_green(), "Generated Successfully!".green().bold());
         println!();
-        if files_written == 1 {
-            println!("   {} {}", "▸".bright_white(), "AGENTS.md".bright_white());
-        } else {
-            println!("   {} {} AGENTS.md files", "▸".bright_white(), files_written.to_string().bright_white().bold());
+
+        // Show which target files were created (sorted for consistent output)
+        let mut target_names: Vec<String> = target_files_created.iter()
+            .map(|t| match t.as_str() {
+                "agents-md" => "AGENTS.md",
+                "claude-md" => "CLAUDE.md",
+                "cursorrules" => ".cursorrules",
+                _ => t.as_str(),
+            })
+            .map(|s| s.to_string())
+            .collect();
+
+        target_names.sort(); // Deterministic order: AGENTS.md, CLAUDE.md, ...
+
+        if !target_names.is_empty() {
+            for name in target_names {
+                println!("   {} {}", "▸".bright_white(), name.bright_white());
+            }
         }
     }
     println!();
@@ -589,8 +599,8 @@ pub fn cmd_preview(_path: &str) -> Result<()> {
                     println!("      {} {}", "Globs:".bright_black(), globs.join(", ").yellow());
                 }
             }
-            if rule.frontmatter.always_apply == Some(true) {
-                println!("      {} {}", "Apply:".bright_black(), "Always".green());
+            if rule.frontmatter.when.is_none() {
+                println!("      {} {}", "Apply:".bright_black(), "Always (no when clause)".green());
             }
         }
         println!();
@@ -1136,8 +1146,8 @@ pub fn cmd_context(file_path: &str, var_args: Vec<String>, json_output: bool) ->
     // 10. Collect metadata about matched rules
     let mut rules_metadata = Vec::new();
     for rule in &matching_rules {
-        let reason = if rule.frontmatter.always_apply == Some(true) {
-            "alwaysApply: true".to_string()
+        let reason = if rule.frontmatter.when.is_none() {
+            "always (no when clause)".to_string()
         } else if let Some(globs) = &rule.frontmatter.globs {
             format!("glob: {}", globs.join(", "))
         } else {
@@ -1181,8 +1191,8 @@ pub fn cmd_context(file_path: &str, var_args: Vec<String>, json_output: bool) ->
         println!("## Matched Rules ({})", matching_rules.len());
         for rule in &matching_rules {
             let name = rule.frontmatter.name.as_deref().unwrap_or("unnamed");
-            let reason = if rule.frontmatter.always_apply == Some(true) {
-                "alwaysApply: true".to_string()
+            let reason = if rule.frontmatter.when.is_none() {
+                "always (no when clause)".to_string()
             } else if let Some(globs) = &rule.frontmatter.globs {
                 format!("glob: {}", globs.join(", "))
             } else {

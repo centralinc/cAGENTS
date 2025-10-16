@@ -1,18 +1,12 @@
 ---
-name: agents-from-claudemd
-description: Imported from CLAUDE.md
-alwaysApply: true
-when:
-  target: ["claude-md"]
+name: shared-root
+description: shared sections
 order: 20
 ---
-# CLAUDE.md
-
-This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
 ## Project Overview
 
-**.cAGENTS** is a cross-platform generator for `AGENTS.md` and compatible rule formats (e.g., Cursor `.mdc`). It composes rule files (Markdown + YAML front-matter), renders them with a BYOC (Bring-Your-Own-Compiler) engine, and writes context-scoped outputs at the repo root and nested directories.
+**cAGENTS** is a cross-platform generator for `AGENTS.md` and compatible rule formats (e.g., Cursor `.mdc`). It composes rule files (Markdown + YAML front-matter), renders them with a BYOC (Bring-Your-Own-Compiler) engine, and writes context-scoped outputs at the repo root and nested directories.
 
 This is a hybrid monorepo with:
 - **Rust workspace** (`crates/`) - The fast, deterministic core
@@ -73,19 +67,20 @@ If you still see interactive prompts during tests, run with:
 CAGENTS_TEST=1 cargo test --workspace
 ```
 
-## CLI Commands
+## Architecture Overview
 
-The CLI provides these subcommands (note: currently stubs, see implementation in `crates/cagents-core/src/lib.rs`):
+### Repository Structure
 
-```bash
-cagents init --preset=mdc
-cagents build --env=cloud --role=backend [--out .]
-cagents export --target cursor
-cagents lint
-cagents explain <path>
+```
+crates/
+  cagents-core/     - Library (planning, renderers, writers)
+  cagents-cli/      - CLI binary entry point
+packages/
+  cagents/          - pnpm wrapper (downloads binary in releases)
+docs/               - PRD, architecture, config, CLI, compiler protocol, roadmap
+examples/           - Runnable samples
 ```
 
-## Architecture Overview
 
 ### Core (Rust) - `crates/cagents-core/`
 
@@ -94,7 +89,7 @@ The pipeline flows through these modules (see `crates/cagents-core/src/lib.rs`):
 1. **config** - TOML config loader (project-local `.agentscribe/config.toml` + user-level `~/.cagents/config.toml`)
 2. **loader** - Rule discovery (front-matter + body parsing)
 3. **model** - Data structures for `ProjectConfig`, `RuleFrontmatter`, scoping (`When`), merge strategies
-4. **planner** - Determines which rules apply based on globs, `alwaysApply`, `when` conditions (env/role/language), order, and extends
+4. **planner** - Determines which rules apply based on globs, `when` conditions (env/role/language), order, and extends
 5. **render** - Template rendering via BYOB command adapters
 6. **adapters/** - External command protocol via stdin/stdout JSON (built-in engines removed in M11)
 7. **merge** - Section-aware rule merging
@@ -112,7 +107,7 @@ Config files use TOML with these key sections:
 - `[variables]` - `static`, `env`, `command` (for template data)
 - `[execution]` - `shell`, `timeoutMs`, `allowCommands`
 
-Rule templates have YAML front-matter with fields like `engine`, `globs`, `alwaysApply`, `when`, `order`, `extends`, `targets`, `merge`.
+Rule templates have YAML front-matter with fields like `engine`, `globs`, `when`, `order`, `extends`, `targets`, `merge`.
 
 ### BYOC Compiler Protocol
 
@@ -164,22 +159,8 @@ See `docs/COMPILERS.md` and `crates/cagents-core/src/adapters/command.rs`.
 
 ### Task Tracking Requirement
 
-**You MUST use TodoWrite for ALL work:**
+Track work with Beads instead of Markdown. Run \`bd quickstart\` to see how.
 
-1. **Start of work:** Create todo list with all slices
-2. **During work:** Update status (in_progress → completed)
-3. **After each slice:** Mark completed and move to next
-4. **Before commits:** Ensure todos reflect actual work
-
-**Example:**
-```javascript
-TodoWrite([
-  {content: "Write failing test for feature X", status: "in_progress"},
-  {content: "Implement feature X", status: "pending"},
-  {content: "Verify all tests pass", status: "pending"},
-  {content: "Commit changes", status: "pending"}
-])
-```
 
 ### Test Locations
 
@@ -240,25 +221,47 @@ git commit -m "Add new_feature with tests"
 
 ### Non-Negotiable Rules
 
-1. **No implementation without tests**
-2. **No commits without running full test suite**
-3. **No version bumps without CHANGELOG update**
-4. **No work without TodoWrite tracking**
+1. **Work must include tests**
+2. **Run full test suite before considering a task complete**
+3. **Add changeset for all user-facing changes**
+   - Run `pnpm changeset` to create a changeset file
+   - Describe what changed and impact on users
+   - Choose appropriate bump type (major/minor/patch)
+4. **Work must be tracked with Beads**
 5. **TDD always: test first, code second**
+6. **Update relevant docs and README.md for consumers**
 
 Violating these rules will result in technical debt and bugs.
 
-## Repository Structure
+### Adding a Changeset
 
-```
-crates/
-  cagents-core/     - Library (planning, renderers, writers)
-  cagents-cli/      - CLI binary entry point
-packages/
-  cagents/          - pnpm wrapper (downloads binary in releases)
-docs/               - PRD, architecture, config, CLI, compiler protocol, roadmap
-examples/           - Runnable samples
+For user-facing changes (new features, bug fixes, breaking changes):
+
+```bash
+pnpm changeset
 ```
 
-## Tasks and planning
-We track work in Beads instead of Markdown. Run \`bd quickstart\` to see how.
+This creates a file in `.changeset/` describing your changes. Example:
+
+```markdown
+---
+"cagents": minor
+---
+
+Added new `outputIn` field for controlling where AGENTS.md files are generated.
+Supports three strategies: matched, parent, and common-parent.
+```
+
+**When to add a changeset:**
+- ✅ New features, bug fixes, API changes
+- ✅ Breaking changes (mark as major)
+- ❌ Internal refactoring with no user impact
+- ❌ Test-only changes
+- ❌ Documentation updates (unless user-facing)
+
+**Changeset bump types:**
+- **patch** (default) - Bug fixes, minor improvements, non-breaking changes
+- **minor** - New features, enhancements (must be explicitly mentioned)
+- **major** - Breaking changes (must be explicitly mentioned)
+
+**Default to patch unless explicitly told otherwise.** If in doubt, use patch.

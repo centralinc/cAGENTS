@@ -5,7 +5,7 @@ cursorRulesDir = ".cursor/rules"
 
 [defaults]
 engine = "command:python3 .cAGENTS/tools/render.py"
-targets = ["agentsmd","cursor"]
+targets = ["agents-md","cursor"]
 order = 50
 
 [variables.static]

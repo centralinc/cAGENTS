@@ -104,7 +104,6 @@ engine = """command:{}"""
     let template = templates_dir.child("project-rules.md");
     template.write_str(r#"---
 name: "Project Rules"
-alwaysApply: true
 ---
 # Project: {{projectName}}
 
@@ -185,7 +184,7 @@ globs:
 }
 
 #[test]
-fn test_render_always_apply_rules() {
+fn test_render_rules_without_when_clause() {
     // Create a temporary directory with a simple cAGENTS setup
     let temp = assert_fs::TempDir::new().unwrap();
 
@@ -210,11 +209,10 @@ engine = """command:{}"""
     let templates_dir = cagents_dir.child("templates");
     templates_dir.create_dir_all().unwrap();
 
-    // Create a template with alwaysApply
+    // Create a template without when clause (implicitly applies to all files)
     let global_template = templates_dir.child("global-rules.md");
     global_template.write_str(r#"---
 name: "Global Rules"
-alwaysApply: true
 ---
 # Global Rules
 
@@ -225,7 +223,7 @@ These rules apply to all files.
     let test_file = temp.child("anyfile.xyz");
     test_file.write_str("test").unwrap();
 
-    // Run cagents render - should include alwaysApply rule
+    // Run cagents render - should include rule without when clause
     let mut cmd = Command::cargo_bin("cagents").unwrap();
     cmd.current_dir(temp.path())
         .arg("render")

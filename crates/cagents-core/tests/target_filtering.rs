@@ -29,7 +29,6 @@ targets = ["agents-md", "claude-md"]
     // Create template that only applies to claude-md
     fs::write(".cAGENTS/templates/claude-specific.md", r#"---
 name: claude-specific
-alwaysApply: true
 when:
   target: ["claude-md"]
 ---
@@ -38,10 +37,9 @@ when:
 This should only appear in CLAUDE.md
 "#).unwrap();
 
-    // Create template that applies to both
+    // Create template that applies to both (no when clause = all targets)
     fs::write(".cAGENTS/templates/common.md", r#"---
 name: common
-alwaysApply: true
 ---
 # Common Rules
 
@@ -49,7 +47,7 @@ This should appear in both files
 "#).unwrap();
 
     // Run build
-    cagents_core::cmd_build(None, None, None, None, false).unwrap();
+    cagents_core::cmd_build(None, false).unwrap();
 
     // Check AGENTS.md does NOT have claude-specific content
     let agents = fs::read_to_string("AGENTS.md").unwrap();
@@ -89,7 +87,6 @@ targets = ["agents-md", "claude-md", "cursorrules"]
     // Create template that only applies to cursorrules
     fs::write(".cAGENTS/templates/cursor-only.md", r#"---
 name: cursor-only
-alwaysApply: true
 when:
   target: ["cursorrules"]
 ---
@@ -99,7 +96,7 @@ Cursor IDE specific configuration
 "#).unwrap();
 
     // Run build
-    cagents_core::cmd_build(None, None, None, None, false).unwrap();
+    cagents_core::cmd_build(None, false).unwrap();
 
     // Check only .cursorrules has the content
     assert!(PathBuf::from(".cursorrules").exists(), ".cursorrules should be created");
@@ -141,7 +138,6 @@ targets = ["agents-md", "claude-md", "cursorrules"]
     // Create template that applies to agents-md and claude-md but not cursorrules
     fs::write(".cAGENTS/templates/markdown-only.md", r#"---
 name: markdown-only
-alwaysApply: true
 when:
   target: ["agents-md", "claude-md"]
 ---
@@ -151,7 +147,7 @@ Rich markdown formatting here
 "#).unwrap();
 
     // Run build
-    cagents_core::cmd_build(None, None, None, None, false).unwrap();
+    cagents_core::cmd_build(None, false).unwrap();
 
     // Check agents-md and claude-md have it
     assert!(PathBuf::from("AGENTS.md").exists());

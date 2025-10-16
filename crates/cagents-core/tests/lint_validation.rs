@@ -58,7 +58,6 @@ engine = "builtin:simple"
 
     fs::write(".cAGENTS/templates/bad.md", r#"---
 name: bad-target
-alwaysApply: true
 when:
   target: ["invalid-target", "another-bad"]
 ---
@@ -100,7 +99,6 @@ targets = ["agents-md", "claude-md", "cursorrules"]
 
     fs::write(".cAGENTS/templates/good.md", r#"---
 name: good-target
-alwaysApply: true
 when:
   target: ["agents-md", "claude-md"]
 ---

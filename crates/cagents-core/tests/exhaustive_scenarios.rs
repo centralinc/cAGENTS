@@ -26,7 +26,7 @@ fn test_scenario_monorepo_with_context() {
         Rule {
             frontmatter: RuleFrontmatter {
                 name: Some("workspace".to_string()),
-                always_apply: Some(true),
+                // No when clause = implicitly always applies
                 ..Default::default()
             },
             body: "Workspace rules".to_string(),
@@ -37,13 +37,13 @@ fn test_scenario_monorepo_with_context() {
             frontmatter: RuleFrontmatter {
                 name: Some("backend".to_string()),
                 globs: Some(vec!["packages/backend/**".to_string()]),
-                when: Some(cagents_core::model::When {
-                    role: Some(vec!["backend".to_string()]),
-                    env: None,
-                    language: None,
-                    target: None,
-                }),
-                simplify_globs_to_parent: Some(false), ..Default::default()
+                when: Some(cagents_core::model::When::legacy(
+                    None,
+                    Some(vec!["backend".to_string()]),
+                    None,
+                    None,
+                )),
+                output_in: Some("parent".to_string()), ..Default::default()
             },
             body: "Backend rules".to_string(),
             path: PathBuf::from("backend.md"),
@@ -53,13 +53,13 @@ fn test_scenario_monorepo_with_context() {
             frontmatter: RuleFrontmatter {
                 name: Some("frontend".to_string()),
                 globs: Some(vec!["packages/frontend/**".to_string()]),
-                when: Some(cagents_core::model::When {
-                    role: Some(vec!["frontend".to_string()]),
-                    env: None,
-                    language: None,
-                    target: None,
-                }),
-                simplify_globs_to_parent: Some(false), ..Default::default()
+                when: Some(cagents_core::model::When::legacy(
+                    None,
+                    Some(vec!["frontend".to_string()]),
+                    None,
+                    None,
+                )),
+                output_in: Some("parent".to_string()), ..Default::default()
             },
             body: "Frontend rules".to_string(),
             path: PathBuf::from("frontend.md"),
@@ -94,13 +94,13 @@ fn test_scenario_language_specific_rules() {
             frontmatter: RuleFrontmatter {
                 name: Some("rust".to_string()),
                 globs: Some(vec!["**/*.rs".to_string()]),
-                when: Some(cagents_core::model::When {
-                    language: Some(vec!["Rust".to_string()]),
-                    env: None,
-                    role: None,
-                    target: None,
-                }),
-                simplify_globs_to_parent: Some(false), ..Default::default()
+                when: Some(cagents_core::model::When::legacy(
+                    None,
+                    None,
+                    Some(vec!["Rust".to_string()]),
+                    None,
+                )),
+                output_in: Some("parent".to_string()), ..Default::default()
             },
             body: "Rust rules".to_string(),
             path: PathBuf::from("rust.md"),
@@ -109,13 +109,13 @@ fn test_scenario_language_specific_rules() {
             frontmatter: RuleFrontmatter {
                 name: Some("typescript".to_string()),
                 globs: Some(vec!["**/*.ts".to_string()]),
-                when: Some(cagents_core::model::When {
-                    language: Some(vec!["TypeScript".to_string()]),
-                    env: None,
-                    role: None,
-                    target: None,
-                }),
-                simplify_globs_to_parent: Some(false), ..Default::default()
+                when: Some(cagents_core::model::When::legacy(
+                    None,
+                    None,
+                    Some(vec!["TypeScript".to_string()]),
+                    None,
+                )),
+                output_in: Some("parent".to_string()), ..Default::default()
             },
             body: "TS rules".to_string(),
             path: PathBuf::from("ts.md"),
@@ -151,7 +151,7 @@ fn test_scenario_mixed_always_apply_and_globs() {
         Rule {
             frontmatter: RuleFrontmatter {
                 name: Some("global".to_string()),
-                always_apply: Some(true),
+                // No when clause = implicitly always applies
                 ..Default::default()
             },
             body: "Global rules".to_string(),
@@ -161,7 +161,7 @@ fn test_scenario_mixed_always_apply_and_globs() {
             frontmatter: RuleFrontmatter {
                 name: Some("rust".to_string()),
                 globs: Some(vec!["**/*.rs".to_string()]),
-                simplify_globs_to_parent: Some(false), ..Default::default()
+                output_in: Some("parent".to_string()), ..Default::default()
             },
             body: "Rust rules".to_string(),
             path: PathBuf::from("rust.md"),
@@ -196,7 +196,7 @@ fn test_scenario_order_matters() {
                 name: Some("high".to_string()),
                 globs: Some(vec!["**/*.rs".to_string()]),
                 order: Some(100),
-                simplify_globs_to_parent: Some(false), ..Default::default()
+                output_in: Some("parent".to_string()), ..Default::default()
             },
             body: "High order".to_string(),
             path: PathBuf::from("high.md"),
@@ -206,7 +206,7 @@ fn test_scenario_order_matters() {
                 name: Some("low".to_string()),
                 globs: Some(vec!["**/*.rs".to_string()]),
                 order: Some(1),
-                simplify_globs_to_parent: Some(false), ..Default::default()
+                output_in: Some("parent".to_string()), ..Default::default()
             },
             body: "Low order".to_string(),
             path: PathBuf::from("low.md"),
@@ -227,13 +227,12 @@ fn test_scenario_environment_based_rules() {
     let rule_prod = Rule {
         frontmatter: RuleFrontmatter {
             name: Some("prod-only".to_string()),
-            always_apply: Some(true),
-            when: Some(cagents_core::model::When {
-                env: Some(vec!["prod".to_string(), "staging".to_string()]),
-                role: None,
-                language: None,
-                    target: None,
-            }),
+            when: Some(cagents_core::model::When::legacy(
+                Some(vec!["prod".to_string(), "staging".to_string()]),
+                None,
+                None,
+                None,
+            )),
             ..Default::default()
         },
         body: "Production rules".to_string(),
@@ -243,13 +242,12 @@ fn test_scenario_environment_based_rules() {
     let rule_dev = Rule {
         frontmatter: RuleFrontmatter {
             name: Some("dev-only".to_string()),
-            always_apply: Some(true),
-            when: Some(cagents_core::model::When {
-                env: Some(vec!["dev".to_string()]),
-                role: None,
-                language: None,
-                    target: None,
-            }),
+            when: Some(cagents_core::model::When::legacy(
+                Some(vec!["dev".to_string()]),
+                None,
+                None,
+                None,
+            )),
             ..Default::default()
         },
         body: "Dev rules".to_string(),
@@ -276,13 +274,12 @@ fn test_scenario_all_filters_combined() {
     let rule = Rule {
         frontmatter: RuleFrontmatter {
             name: Some("specific".to_string()),
-            always_apply: Some(true),
-            when: Some(cagents_core::model::When {
-                env: Some(vec!["prod".to_string()]),
-                role: Some(vec!["backend".to_string()]),
-                language: Some(vec!["Rust".to_string()]),
-                target: None,
-            }),
+            when: Some(cagents_core::model::When::legacy(
+                Some(vec!["prod".to_string()]),
+                Some(vec!["backend".to_string()]),
+                Some(vec!["Rust".to_string()]),
+                None,
+            )),
             ..Default::default()
         },
         body: "Specific rules".to_string(),

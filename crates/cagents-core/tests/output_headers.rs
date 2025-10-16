@@ -24,13 +24,12 @@ engine = "builtin:simple"
 
     fs::write(".cAGENTS/templates/main.md", r#"---
 name: main
-alwaysApply: true
 ---
 # Test Rules
 "#).unwrap();
 
     // Run build
-    cagents_core::cmd_build(None, None, None, None, false).unwrap();
+    cagents_core::cmd_build(None, false).unwrap();
 
     // Check AGENTS.md has the update comment
     let agents_content = fs::read_to_string("AGENTS.md").unwrap();
@@ -68,13 +67,12 @@ targets = ["claude-md"]
 
     fs::write(".cAGENTS/templates/main.md", r#"---
 name: main
-alwaysApply: true
 ---
 # Claude Rules
 "#).unwrap();
 
     // Run build
-    cagents_core::cmd_build(None, None, None, None, false).unwrap();
+    cagents_core::cmd_build(None, false).unwrap();
 
     // Check CLAUDE.md has the update comment
     let claude_content = fs::read_to_string("CLAUDE.md").unwrap();
@@ -107,13 +105,12 @@ targets = ["cursorrules"]
 
     fs::write(".cAGENTS/templates/main.md", r#"---
 name: main
-alwaysApply: true
 ---
 # Cursor Rules
 "#).unwrap();
 
     // Run build
-    cagents_core::cmd_build(None, None, None, None, false).unwrap();
+    cagents_core::cmd_build(None, false).unwrap();
 
     // Check .cursorrules has the update comment
     let cursor_content = fs::read_to_string(".cursorrules").unwrap();

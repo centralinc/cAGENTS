@@ -50,7 +50,7 @@ owner = "Jordan"
     let template = temp.child(".cAGENTS/templates/project.md");
     // Use single quotes in YAML to avoid escaping double quotes
     template.write_str(&format!(
-        "---\nname: project\nengine: 'command:{}'\nalwaysApply: true\norder: 1\n---\n# {{{{project}}}}\nOwner: {{{{owner}}}}\n",
+        "---\nname: project\nengine: 'command:{}'\norder: 1\n---\n# {{{{project}}}}\nOwner: {{{{owner}}}}\n",
         command
     ))?;
 
@@ -58,7 +58,7 @@ owner = "Jordan"
     let original = std::env::current_dir()?;
     std::env::set_current_dir(temp.path())?;
 
-    let result = cmd_build(None, None, None, None, false);
+    let result = cmd_build(None, false);
     std::env::set_current_dir(original)?;
 
     result?;
@@ -85,12 +85,12 @@ outputRoot = "."
 
     let template = temp.child(".cAGENTS/templates/rule.hbs.md");
     template.write_str(
-        "---\nname: legacy\nengine: \"handlebars\"\nalwaysApply: true\n---\n# Legacy\n",
+        "---\nname: legacy\nengine: \"handlebars\"\n---\n# Legacy\n",
     )?;
 
     let original = std::env::current_dir()?;
     std::env::set_current_dir(temp.path())?;
-    let result = cmd_build(None, None, None, None, false);
+    let result = cmd_build(None, false);
     std::env::set_current_dir(original)?;
 
     assert!(result.is_err(), "expected error when using built-in engine");

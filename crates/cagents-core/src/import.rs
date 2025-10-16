@@ -38,7 +38,6 @@ project = "imported-from-cursor"
     let template = format!(r#"---
 name: agents-cursor
 description: Imported from .cursorrules
-alwaysApply: true
 targets: ["agentsmd", "cursor"]
 order: 1
 ---
@@ -71,7 +70,7 @@ order: 1
     // Auto-run build
     println!("▸ Running initial build...");
     println!();
-    if let Err(e) = crate::cmd_build(None, None, None, None, false) {
+    if let Err(e) = crate::cmd_build(None, false) {
         println!("⚠ Build failed: {}", e);
     } else {
         println!("✓ AGENTS.md generated!");
@@ -135,18 +134,15 @@ targets = ["agentsmd", "cursor"]
                     for glob in &globs {
                         frontmatter.push_str(&format!("  - \"{}\"\n", glob));
                     }
-                    frontmatter.push_str("simplifyGlobsToParent: true\n");
+                    frontmatter.push_str("outputIn: common-parent\n");
 
                     // Track for warning
                     let common_parent = find_common_parent(&globs);
                     if common_parent != globs {
                         simplified_rules.push((name.to_string(), globs.clone(), common_parent));
                     }
-                } else {
-                    frontmatter.push_str("alwaysApply: true\n");
                 }
-            } else {
-                frontmatter.push_str("alwaysApply: true\n");
+                // Note: empty globs or no globs = no when clause = implicitly always apply
             }
 
             frontmatter.push_str("targets: [\"agentsmd\", \"cursor\"]\n");
@@ -172,7 +168,7 @@ targets = ["agentsmd", "cursor"]
             println!("    Simplified to parent: {}", simplified.join(", "));
         }
         println!();
-        println!("  Templates preserve original patterns but simplifyGlobsToParent: true");
+        println!("  Templates preserve original patterns but outputIn: common-parent");
         println!("  This generates AGENTS.md at common parent directory.");
     }
 
@@ -195,7 +191,7 @@ targets = ["agentsmd", "cursor"]
     // Auto-run build
     println!("▸ Running initial build...");
     println!();
-    if let Err(e) = crate::cmd_build(None, None, None, None, false) {
+    if let Err(e) = crate::cmd_build(None, false) {
         println!("⚠ Build failed: {}", e);
     } else {
         println!("✓ AGENTS.md generated!");
@@ -309,7 +305,6 @@ project = "imported-from-agents-md"
     let template = format!(r#"---
 name: agents-root
 description: Imported from AGENTS.md
-alwaysApply: true
 order: 1
 ---
 {}
@@ -341,7 +336,7 @@ order: 1
     // Auto-run build
     println!("▸ Running initial build...");
     println!();
-    if let Err(e) = crate::cmd_build(None, None, None, None, false) {
+    if let Err(e) = crate::cmd_build(None, false) {
         println!("⚠ Build failed: {}", e);
     } else {
         println!("✓ AGENTS.md regenerated from template!");
@@ -382,7 +377,6 @@ project = "imported-from-claude-md"
     let template = format!(r#"---
 name: agents-root
 description: Imported from CLAUDE.md
-alwaysApply: true
 order: 1
 ---
 {}
@@ -414,7 +408,7 @@ order: 1
     // Auto-run build
     println!("▸ Running initial build...");
     println!();
-    if let Err(e) = crate::cmd_build(None, None, None, None, false) {
+    if let Err(e) = crate::cmd_build(None, false) {
         println!("⚠ Build failed: {}", e);
     } else {
         println!("✓ AGENTS.md regenerated from template!");
@@ -533,7 +527,6 @@ project = "imported-merged"
         let template = format!(r#"---
 name: {}
 description: Imported from {}
-alwaysApply: true
 {}
 order: {}
 ---
@@ -587,7 +580,7 @@ order: {}
     // Auto-run build
     println!("▸ Running initial build...");
     println!();
-    if let Err(e) = crate::cmd_build(None, None, None, None, false) {
+    if let Err(e) = crate::cmd_build(None, false) {
         println!("⚠ Build failed: {}", e);
     } else {
         println!("✓ AGENTS.md generated from merged templates!");

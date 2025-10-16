@@ -129,30 +129,6 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GH_DEPLOY_TOKEN }}
           NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
 
-      - name: Setup Rust
-        if: steps.changesets.outputs.published == 'true'
-        uses: dtolnay/rust-toolchain@stable
-
-      # Cache Rust dependencies for faster builds
-      - uses: Swatinem/rust-cache@v2
-        if: steps.changesets.outputs.published == 'true'
-        with:
-          cache-on-failure: true
-
-      - name: Publish to crates.io
-        if: steps.changesets.outputs.published == 'true'
-        run: |
-          cargo login ${{ secrets.CARGO_REGISTRY_TOKEN }}
-          # Publish core first (cli depends on it)
-          cd crates/cagents-core
-          cargo publish --allow-dirty
-          cd ../cagents-cli
-          # Wait for crates.io to index the core crate
-          sleep 30
-          cargo publish --allow-dirty
-        env:
-          CARGO_REGISTRY_TOKEN: ${{ secrets.CARGO_REGISTRY_TOKEN }}
-
       - name: Create GitHub Release
         if: steps.changesets.outputs.published == 'true'
         run: |

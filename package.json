@@ -1,16 +1,7 @@
 {
-  "name": "cAGENTS",
+  "name": "cAGENTS-monorepo",
   "private": true,
   "version": "0.1.0",
-  "description": "cAGENTS - collected, composed, and compiled AGENTS.md",
-  "repository": {
-    "url": "https://github.com/centralinc/cAGENTS.git"
-  },
-  "bugs": {
-    "url": "https://github.com/centralinc/cAGENTS.git/issues"
-  },
-  "homepage": "https://github.com/centralinc/cAGENTS#readme",
-  "author": "jordan@central.inc",
   "workspaces": [
     "packages/*"
   ],

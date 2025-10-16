@@ -143,8 +143,8 @@ globs:                           # Optional: generate nested AGENTS.md in matchi
   - "src/api/**"
   - "tests/**"
 when:                            # Optional: conditional inclusion
-  env: ["codex-cloud"]           # Only include when --env codex-cloud
-  language: ["rust"]             # Only include when --language rust
+  app_env: ["production"]        # Only include when app_env variable matches
+  language: ["rust"]             # Only include when language variable matches
   target: ["agents-md"]          # Only include for specific output formats
                                  # NOTE: No when clause = rule applies everywhere
 order: 10                        # Optional: sort order (default: 50, lower = earlier)
@@ -224,11 +224,22 @@ cagents init --dry-run    # Show what would be created
 Generate AGENTS.md files from templates.
 
 ```bash
-cagents build                                        # Build with all templates
-cagents build --env codex-cloud                      # Filter by environment
-cagents build --language rust                        # Filter by language
-cagents build --env codex-cloud --language rust      # Combine filters
-cagents build --dry-run                              # Preview without writing
+cagents build                    # Build with all templates
+cagents build --dry-run          # Preview without writing
+```
+
+Use config variables for conditional rules:
+
+```toml
+# .cAGENTS/config.toml
+[variables.command]
+app_env = "echo $APP_ENV"        # Execute command to get value
+language = "echo rust"           # Can be static or dynamic
+
+# Or use static variables
+[variables.static]
+app_env = "production"
+language = "rust"
 ```
 
 **How it works:**

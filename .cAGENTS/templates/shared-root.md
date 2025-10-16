@@ -222,10 +222,46 @@ git commit -m "Add new_feature with tests"
 ### Non-Negotiable Rules
 
 1. **Work must include tests**
-2. **run full test suite before considering a task compete**
-3. **Include a CHANGELOG update for all work**
+2. **Run full test suite before considering a task complete**
+3. **Add changeset for all user-facing changes**
+   - Run `pnpm changeset` to create a changeset file
+   - Describe what changed and impact on users
+   - Choose appropriate bump type (major/minor/patch)
 4. **Work must be tracked with Beads**
 5. **TDD always: test first, code second**
 6. **Update relevant docs and README.md for consumers**
 
 Violating these rules will result in technical debt and bugs.
+
+### Adding a Changeset
+
+For user-facing changes (new features, bug fixes, breaking changes):
+
+```bash
+pnpm changeset
+```
+
+This creates a file in `.changeset/` describing your changes. Example:
+
+```markdown
+---
+"cagents": minor
+---
+
+Added new `outputIn` field for controlling where AGENTS.md files are generated.
+Supports three strategies: matched, parent, and common-parent.
+```
+
+**When to add a changeset:**
+- ✅ New features, bug fixes, API changes
+- ✅ Breaking changes (mark as major)
+- ❌ Internal refactoring with no user impact
+- ❌ Test-only changes
+- ❌ Documentation updates (unless user-facing)
+
+**Changeset bump types:**
+- **patch** (default) - Bug fixes, minor improvements, non-breaking changes
+- **minor** - New features, enhancements (must be explicitly mentioned)
+- **major** - Breaking changes (must be explicitly mentioned)
+
+**Default to patch unless explicitly told otherwise.** If in doubt, use patch.

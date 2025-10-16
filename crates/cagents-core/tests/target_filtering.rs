@@ -47,7 +47,7 @@ This should appear in both files
 "#).unwrap();
 
     // Run build
-    cagents_core::cmd_build(None, None, None, None, false).unwrap();
+    cagents_core::cmd_build(None, false).unwrap();
 
     // Check AGENTS.md does NOT have claude-specific content
     let agents = fs::read_to_string("AGENTS.md").unwrap();
@@ -96,7 +96,7 @@ Cursor IDE specific configuration
 "#).unwrap();
 
     // Run build
-    cagents_core::cmd_build(None, None, None, None, false).unwrap();
+    cagents_core::cmd_build(None, false).unwrap();
 
     // Check only .cursorrules has the content
     assert!(PathBuf::from(".cursorrules").exists(), ".cursorrules should be created");
@@ -147,7 +147,7 @@ Rich markdown formatting here
 "#).unwrap();
 
     // Run build
-    cagents_core::cmd_build(None, None, None, None, false).unwrap();
+    cagents_core::cmd_build(None, false).unwrap();
 
     // Check agents-md and claude-md have it
     assert!(PathBuf::from("AGENTS.md").exists());

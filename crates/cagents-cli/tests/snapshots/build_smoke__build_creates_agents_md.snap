@@ -1,6 +1,5 @@
 ---
 source: crates/cagents-cli/tests/build_smoke.rs
-assertion_line: 67
 expression: content
 ---
 <!--

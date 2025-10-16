@@ -265,9 +265,6 @@ fn render_rule_with_command(
 /// - Custom output path (--out param ignored)
 /// - Dry run mode
 pub fn cmd_build(
-    env: Option<String>,      // Filter rules by environment (e.g., "cloud", "local")
-    role: Option<String>,     // Filter rules by role (e.g., "backend", "frontend")
-    language: Option<String>, // Filter rules by language (e.g., "rust", "typescript")
     _out: Option<String>,
     _dry_run: bool,
 ) -> Result<()> {
@@ -280,11 +277,10 @@ pub fn cmd_build(
     let base_dir = PathBuf::from(".cAGENTS");
     let all_rules = loader::discover_rules(&config, &base_dir)?;
 
-    // 3. Build template data from config variables first
+    // 3. Build template data from config variables
     let base_data = build_template_data_map(&config);
 
-    // 4. Build context by merging CLI args with config variables
-    // This allows both legacy CLI flags and new config-based variables to work
+    // 4. Build context from config variables (for use in when clauses)
     let mut context_variables = std::collections::HashMap::new();
 
     // Add config variables to context (for use in when clauses)
@@ -294,18 +290,7 @@ pub fn cmd_build(
         }
     }
 
-    // CLI args override config variables (for backward compatibility)
-    if let Some(env_val) = &env {
-        context_variables.insert("env".to_string(), env_val.clone());
-    }
-    if let Some(role_val) = &role {
-        context_variables.insert("role".to_string(), role_val.clone());
-    }
-    if let Some(language_val) = &language {
-        context_variables.insert("language".to_string(), language_val.clone());
-    }
-
-    // Create context from merged variables
+    // Create context from variables
     let context = planner::BuildContext::from_variables(context_variables);
 
     // 5. Plan outputs (group rules by target directories)
@@ -359,9 +344,10 @@ pub fn cmd_build(
             );
         }
 
-        // Determine output path
+        // Determine output path and whether this is root
         let output_root = PathBuf::from(&config.paths.output_root);
         let output_dir = output_root.join(target_dir);
+        let is_root = target_dir == &PathBuf::from(".");
 
         // Write to all configured targets
         for target in &output_targets {
@@ -394,11 +380,11 @@ pub fn cmd_build(
             // Write to appropriate file
             match target.as_str() {
                 "agents-md" => {
-                    writers::agents_md::write_agents_md(&output_dir, &target_merged)?;
+                    writers::agents_md::write_agents_md(&output_dir, &target_merged, is_root)?;
                     target_files_created.insert(target.to_string());
                 }
                 "claude-md" => {
-                    writers::claude_md::write_claude_md(&output_dir, &target_merged)?;
+                    writers::claude_md::write_claude_md(&output_dir, &target_merged, is_root)?;
                     target_files_created.insert(target.to_string());
                 }
                 "cursorrules" => {

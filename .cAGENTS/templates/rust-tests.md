@@ -2,8 +2,8 @@
 name: rust-tests
 description: Testing Guide for rust tests
 globs:
-  - crates/**/tests/**
-outputIn: parent
+  - crates/**/tests/
+outputIn: matched
 order: 30
 ---
 ## Running Tests

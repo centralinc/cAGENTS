@@ -45,7 +45,7 @@ This is a test project.
     std::env::set_current_dir(temp.path())?;
 
     // Run build
-    let result = cmd_build(None, None, None, None, false);
+    let result = cmd_build(None, false);
 
     // Restore directory
     std::env::set_current_dir(&original_dir)?;
@@ -101,7 +101,7 @@ Owner: {{undefined_var}}
     std::env::set_current_dir(temp.path())?;
 
     // Run build - should FAIL
-    let result = cmd_build(None, None, None, None, false);
+    let result = cmd_build(None, false);
 
     // Restore directory
     std::env::set_current_dir(&original_dir)?;
@@ -157,7 +157,7 @@ Active: {{active}}
     std::env::set_current_dir(temp.path())?;
 
     // Run build
-    let result = cmd_build(None, None, None, None, false);
+    let result = cmd_build(None, false);
 
     // Restore directory
     std::env::set_current_dir(&original_dir)?;

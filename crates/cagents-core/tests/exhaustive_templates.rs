@@ -61,7 +61,7 @@ outputRoot = "."
 
     let original = std::env::current_dir()?;
     std::env::set_current_dir(temp.path())?;
-    let result = cmd_build(None, None, None, None, false);
+    let result = cmd_build(None, false);
     std::env::set_current_dir(original)?;
 
     result?;
@@ -103,7 +103,7 @@ print(json.dumps({"content": content}))
 
     let original = std::env::current_dir()?;
     std::env::set_current_dir(temp.path())?;
-    let result = cmd_build(None, None, None, None, false);
+    let result = cmd_build(None, false);
     std::env::set_current_dir(original)?;
 
     result?;
@@ -144,7 +144,7 @@ print(json.dumps({"content": content}))
 
     let original = std::env::current_dir()?;
     std::env::set_current_dir(temp.path())?;
-    let result = cmd_build(None, None, None, None, false);
+    let result = cmd_build(None, false);
     std::env::set_current_dir(original)?;
 
     result?;
@@ -173,7 +173,7 @@ outputRoot = "."
 
     let original = std::env::current_dir()?;
     std::env::set_current_dir(temp.path())?;
-    let result = cmd_build(None, None, None, None, false);
+    let result = cmd_build(None, false);
     std::env::set_current_dir(original)?;
 
     assert!(result.is_err(), "expected command failure to propagate");

@@ -37,7 +37,7 @@ name: test
     .unwrap();
 
     // Build
-    cagents_core::cmd_build(None, None, None, None, false).unwrap();
+    cagents_core::cmd_build(None, false).unwrap();
 
     // Read generated AGENTS.md
     let content = fs::read_to_string("AGENTS.md").unwrap();
@@ -87,7 +87,7 @@ name: test
     .unwrap();
 
     // Build
-    cagents_core::cmd_build(None, None, None, None, false).unwrap();
+    cagents_core::cmd_build(None, false).unwrap();
 
     // Read generated CLAUDE.md
     let content = fs::read_to_string("CLAUDE.md").unwrap();

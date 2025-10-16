@@ -383,7 +383,7 @@ order: 1
     // Auto-run build
     println!("▸ Running initial build...");
     println!();
-    if let Err(e) = crate::cmd_build(None, None, None, None, false) {
+    if let Err(e) = crate::cmd_build(None, false) {
         println!("⚠ Initial build failed: {}", e);
         println!();
         println!("Next steps:");

@@ -70,7 +70,7 @@ order: 1
     // Auto-run build
     println!("▸ Running initial build...");
     println!();
-    if let Err(e) = crate::cmd_build(None, None, None, None, false) {
+    if let Err(e) = crate::cmd_build(None, false) {
         println!("⚠ Build failed: {}", e);
     } else {
         println!("✓ AGENTS.md generated!");
@@ -191,7 +191,7 @@ targets = ["agentsmd", "cursor"]
     // Auto-run build
     println!("▸ Running initial build...");
     println!();
-    if let Err(e) = crate::cmd_build(None, None, None, None, false) {
+    if let Err(e) = crate::cmd_build(None, false) {
         println!("⚠ Build failed: {}", e);
     } else {
         println!("✓ AGENTS.md generated!");
@@ -336,7 +336,7 @@ order: 1
     // Auto-run build
     println!("▸ Running initial build...");
     println!();
-    if let Err(e) = crate::cmd_build(None, None, None, None, false) {
+    if let Err(e) = crate::cmd_build(None, false) {
         println!("⚠ Build failed: {}", e);
     } else {
         println!("✓ AGENTS.md regenerated from template!");
@@ -408,7 +408,7 @@ order: 1
     // Auto-run build
     println!("▸ Running initial build...");
     println!();
-    if let Err(e) = crate::cmd_build(None, None, None, None, false) {
+    if let Err(e) = crate::cmd_build(None, false) {
         println!("⚠ Build failed: {}", e);
     } else {
         println!("✓ AGENTS.md regenerated from template!");
@@ -580,7 +580,7 @@ order: {}
     // Auto-run build
     println!("▸ Running initial build...");
     println!();
-    if let Err(e) = crate::cmd_build(None, None, None, None, false) {
+    if let Err(e) = crate::cmd_build(None, false) {
         println!("⚠ Build failed: {}", e);
     } else {
         println!("✓ AGENTS.md generated from merged templates!");

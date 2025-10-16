@@ -48,9 +48,6 @@ cagents init
 
 # Build
 cagents build
-
-# Build with context filtering
-cagents build --language rust --env prod
 ```
 
 ---
@@ -63,7 +60,7 @@ Write templates with frontmatter:
 ---
 name: rust-guidelines
 when:
-  language: ["Rust"]
+  language: ["rust"]
 globs: ["**/*.rs"]
 ---
 ## Rust Development
@@ -71,11 +68,18 @@ globs: ["**/*.rs"]
 Use Result types for error handling.
 ```
 
-Build with context:
+Configure variables in `.cAGENTS/config.toml`:
 
-```bash
-cagents build --language rust
-→ Includes only templates matching language=Rust
+```toml
+[variables.static]
+language = "rust"
+```
+
+Or use dynamic variables:
+
+```toml
+[variables.command]
+app_env = "echo $APP_ENV"
 ```
 
 ---
@@ -168,22 +172,44 @@ order: 10
 
 ### 1. Environment-Specific
 
-```bash
-cagents build --env dev
-→ Dev shortcuts, local DB
+Define variables in config:
 
-cagents build --env prod
-→ Deployment checklist, NO dev details
+```toml
+# .cAGENTS/config.toml
+[variables.command]
+app_env = "echo $APP_ENV"
+```
+
+Use in templates:
+
+```yaml
+---
+when:
+  app_env: ["dev"]
+---
+## Dev Environment
+Local DB, debug shortcuts
 ```
 
 ### 2. Language-Specific
 
-```bash
-cagents build --language rust
-→ Rust guidelines for .rs files
+Configure language variable:
 
-cagents build --language typescript
-→ TypeScript patterns for .ts files
+```toml
+[variables.static]
+language = "rust"
+```
+
+Use in templates:
+
+```yaml
+---
+when:
+  language: ["rust"]
+globs: ["**/*.rs"]
+---
+## Rust Guidelines
+Use Result types for error handling
 ```
 
 ### 3. Monorepo

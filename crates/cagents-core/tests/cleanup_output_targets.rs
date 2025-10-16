@@ -34,7 +34,7 @@ name: main
 "#).unwrap();
 
     // Run first build - should create all 3 files
-    cagents_core::cmd_build(None, None, None, None, false).unwrap();
+    cagents_core::cmd_build(None, false).unwrap();
 
     assert!(PathBuf::from("AGENTS.md").exists(), "Should create AGENTS.md");
     assert!(PathBuf::from("CLAUDE.md").exists(), "Should create CLAUDE.md");
@@ -54,7 +54,7 @@ targets = ["agents-md"]
 "#).unwrap();
 
     // Run second build - should clean up CLAUDE.md and .cursorrules
-    cagents_core::cmd_build(None, None, None, None, false).unwrap();
+    cagents_core::cmd_build(None, false).unwrap();
 
     env::set_current_dir(original).unwrap();
 
@@ -94,7 +94,7 @@ name: main
 "#).unwrap();
 
     // First build
-    cagents_core::cmd_build(None, None, None, None, false).unwrap();
+    cagents_core::cmd_build(None, false).unwrap();
     assert!(PathBuf::from("AGENTS.md").exists());
     assert!(PathBuf::from("CLAUDE.md").exists());
 
@@ -109,7 +109,7 @@ engine = "builtin:simple"
 "#).unwrap();
 
     // Second build - should clean up CLAUDE.md
-    cagents_core::cmd_build(None, None, None, None, false).unwrap();
+    cagents_core::cmd_build(None, false).unwrap();
 
     env::set_current_dir(original).unwrap();
 

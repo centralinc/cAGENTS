@@ -1,5 +1,19 @@
 # cagents
 
+## 0.3.3
+
+### Patch Changes
+
+- e9b4f72: Added consistent nested file support across all import types. The `import` command now recursively discovers and imports nested files for all formats:
+
+  - `AGENTS.md` files in subdirectories are imported as separate templates (e.g., `backend/AGENTS.md` → `agents-backend.md`)
+  - `CLAUDE.md` files in subdirectories are imported as separate templates (e.g., `frontend/CLAUDE.md` → `agents-frontend.md`)
+  - `.cursorrules` files in subdirectories are imported as separate templates (e.g., `backend/.cursorrules` → `agents-cursor-backend.md`)
+
+  Root-level files are named with `-root` suffix (e.g., `agents-root.md`, `agents-cursor-root.md`) for consistency with nested files.
+
+- e9b4f72: Fixed import of .cursor/rules to recursively process all Markdown files in subdirectories. Previously only top-level rules were imported, now nested rules are correctly discovered and imported with flattened names (e.g., `subdir/file.md` becomes `agents-subdir-file.md`).
+
 ## 0.3.2
 
 ### Patch Changes

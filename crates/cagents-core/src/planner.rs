@@ -198,7 +198,7 @@ pub fn plan_outputs(
 
         // Note: when clause filtering (including target) is done later per-target output
 
-        // Determine output strategy using new outputIn field (or legacy simplifyGlobsToParent)
+        // Determine output strategy using outputIn field
         let strategy = rule.frontmatter.get_output_strategy();
 
         let dirs = match strategy.as_str() {
@@ -234,7 +234,7 @@ pub fn plan_outputs(
 }
 
 /// Find common parent directory from glob patterns
-/// Used when simplifyGlobsToParent is true
+/// Used when outputIn is "common-parent"
 fn find_common_parent_directory(globs: &[String]) -> HashSet<PathBuf> {
     if globs.is_empty() {
         return HashSet::new();

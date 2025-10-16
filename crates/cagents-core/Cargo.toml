@@ -1,6 +1,6 @@
 [package]
 name = "cagents-core"
-version = "0.3.1"
+version = "0.3.2"
 edition = "2021"
 description = "Core library for cAGENTS - AGENTS.md generator with BYOC (Bring-Your-Own-Compiler) support"
 license = "MIT"

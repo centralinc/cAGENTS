@@ -3,7 +3,8 @@
 **Dynamic, context-aware AI coding rules from composable templates.**
 
 ```
-⚠️ Alpha Software - Core features work, but expect rough edges and breaking changes.
+⚠️ Alpha Software (v0.1.0) - Core features work, but expect rough edges and breaking changes.
+Beta releases available with --tag beta for early testing.
 ```
 
 ## Why cAGENTS?

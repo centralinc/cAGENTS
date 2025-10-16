@@ -265,3 +265,52 @@ Supports three strategies: matched, parent, and common-parent.
 - **major** - Breaking changes (must be explicitly mentioned)
 
 **Default to patch unless explicitly told otherwise.** If in doubt, use patch.
+
+### Release Process
+
+The project uses **npm/pnpm for distribution only**. The Rust crates are internal implementation details and are **never published to crates.io**.
+
+**Current version: 0.1.0** - We are in early alpha following changesets recommended flow.
+
+**Changesets Release Flow (Recommended):**
+
+1. **PR Development** → Auto-publish to `@canary`
+   - Every PR automatically publishes canary version
+   - Versions like `0.1.1-canary-abc1234` (git commit hash)
+   - Install: `npm install cagents@canary`
+   - Bot comments on PR with install command
+
+2. **Merge PR** → Changesets bot creates/updates "Version Packages" PR
+   - Aggregates all changesets since last release
+   - Updates version numbers and CHANGELOG
+   - No publish yet - gives you control over release timing
+
+3. **Merge Version PR** → Auto-publish to `@latest`
+   - Builds cross-platform binaries
+   - Publishes stable version to npm
+   - Creates GitHub release with changelog
+
+**Manual Beta Releases (Optional):**
+When you want controlled testing before stable:
+```bash
+pnpm changeset version --snapshot beta
+pnpm build
+cd packages/cagents && npm publish --tag beta
+```
+
+**Automated Workflows:**
+- `.github/workflows/canary.yml` - Canary releases on PRs
+- `.github/workflows/release.yml` - Stable releases via changesets action
+
+**Important:**
+- ✅ Only publish to **npm** (via changesets)
+- ❌ Never publish to **crates.io** (both crates have `publish = false`)
+- ✅ Stable install: `npm install cagents` or `pnpm add cagents`
+- ✅ Canary install: `npm install cagents@canary`
+- ✅ Beta install: `npm install cagents@beta` (when published)
+- ❌ Users should NOT install via `cargo install`
+
+**Local Development:**
+- Build Rust: `cargo build --workspace`
+- Build npm wrapper: `pnpm --filter cagents run build`
+- The npm package's postinstall uses pre-built binaries in releases, or warns to build from source locally

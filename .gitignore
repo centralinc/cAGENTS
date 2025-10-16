@@ -10,3 +10,6 @@ AGENTS.md
 **/AGENTS.md
 CLAUDE.md
 **/CLAUDE.md
+
+# Beads database files
+.beads/*.db

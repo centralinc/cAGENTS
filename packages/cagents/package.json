@@ -9,7 +9,7 @@
   "main": "dist/index.js",
   "scripts": {
     "build": "tsc -p tsconfig.json",
-    "test": "node --test dist/**/*.test.js",
+    "test": "node --test dist/*.test.js",
     "prepare": "npm run build",
     "postinstall": "node dist/postinstall.js",
     "fmt": "echo 'formatting placeholder'"

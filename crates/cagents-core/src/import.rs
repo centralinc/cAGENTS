@@ -134,7 +134,7 @@ targets = ["agentsmd", "cursor"]
                     for glob in &globs {
                         frontmatter.push_str(&format!("  - \"{}\"\n", glob));
                     }
-                    frontmatter.push_str("simplifyGlobsToParent: true\n");
+                    frontmatter.push_str("outputIn: common-parent\n");
 
                     // Track for warning
                     let common_parent = find_common_parent(&globs);
@@ -168,7 +168,7 @@ targets = ["agentsmd", "cursor"]
             println!("    Simplified to parent: {}", simplified.join(", "));
         }
         println!();
-        println!("  Templates preserve original patterns but simplifyGlobsToParent: true");
+        println!("  Templates preserve original patterns but outputIn: common-parent");
         println!("  This generates AGENTS.md at common parent directory.");
     }
 

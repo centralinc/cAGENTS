@@ -74,26 +74,16 @@ pub struct RuleFrontmatter {
     pub links: Option<Vec<Link>>,
     pub targets: Option<Vec<String>>,
     pub extends: Option<Vec<String>>,
-    #[serde(rename = "simplifyGlobsToParent")]
-    pub simplify_globs_to_parent: Option<bool>,
     #[serde(rename = "outputIn")]
     pub output_in: Option<String>,
 }
 
 impl RuleFrontmatter {
-    /// Get the effective output strategy, handling backward compatibility
+    /// Get the effective output strategy
     pub fn get_output_strategy(&self) -> String {
-        // New field takes precedence
-        if let Some(output_in) = &self.output_in {
-            return output_in.clone();
-        }
-
-        // Fall back to simplifyGlobsToParent for backward compatibility
-        match self.simplify_globs_to_parent {
-            Some(true) => "common-parent".to_string(),
-            Some(false) => "parent".to_string(),
-            None => "common-parent".to_string(), // Default: simplify to common parent (preserves old behavior)
-        }
+        self.output_in
+            .clone()
+            .unwrap_or_else(|| "common-parent".to_string()) // Default: common parent
     }
 }
 

@@ -3,7 +3,7 @@ name: rust-tests
 description: Testing Guide for rust tests
 globs:
   - crates/**/tests/**
-simplifyGlobsToParent: false
+outputIn: parent
 order: 30
 ---
 ## Running Tests

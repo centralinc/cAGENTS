@@ -108,34 +108,43 @@ fn test_output_in_common_parent() {
 }
 
 #[test]
-fn test_backward_compat_simplify_globs_to_parent() {
-    // Old field simplifyGlobsToParent should still work
-    let rule_true = Rule {
+fn test_output_in_field_values() {
+    // Test that outputIn field works with different strategies
+    let rule_matched = Rule {
         frontmatter: RuleFrontmatter {
             name: Some("test".to_string()),
-            globs: Some(vec!["src/**/*.rs".to_string()]),
-            simplify_globs_to_parent: Some(true), // Old field
+            globs: Some(vec!["src/**/tests/".to_string()]),
+            output_in: Some("matched".to_string()),
             ..Default::default()
         },
         body: "Test".to_string(),
         path: PathBuf::from("test.md"),
     };
 
-    let rule_false = Rule {
+    let rule_parent = Rule {
         frontmatter: RuleFrontmatter {
             name: Some("test2".to_string()),
             globs: Some(vec!["src/**/*.rs".to_string()]),
-            simplify_globs_to_parent: Some(false), // Old field
+            output_in: Some("parent".to_string()),
             ..Default::default()
         },
         body: "Test2".to_string(),
         path: PathBuf::from("test2.md"),
     };
 
-    // Should map to outputIn values
-    // simplifyGlobsToParent: true → outputIn: common-parent
-    // simplifyGlobsToParent: false → outputIn: parent
+    let rule_common = Rule {
+        frontmatter: RuleFrontmatter {
+            name: Some("test3".to_string()),
+            globs: Some(vec!["src/**/*.rs".to_string()]),
+            output_in: Some("common-parent".to_string()),
+            ..Default::default()
+        },
+        body: "Test3".to_string(),
+        path: PathBuf::from("test3.md"),
+    };
 
-    assert_eq!(rule_true.frontmatter.simplify_globs_to_parent, Some(true));
-    assert_eq!(rule_false.frontmatter.simplify_globs_to_parent, Some(false));
+    // Verify strategies are read correctly
+    assert_eq!(rule_matched.frontmatter.get_output_strategy(), "matched");
+    assert_eq!(rule_parent.frontmatter.get_output_strategy(), "parent");
+    assert_eq!(rule_common.frontmatter.get_output_strategy(), "common-parent");
 }

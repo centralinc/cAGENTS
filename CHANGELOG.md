@@ -11,6 +11,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **BREAKING:** Removed `alwaysApply` field from template frontmatter. Rules without a `when` clause now implicitly apply in all contexts. This simplifies the API by removing redundancy.
   - **Migration:** Remove `alwaysApply: true` from all templates. Rules without `when` clauses will automatically apply everywhere.
   - **Behavior:** Rules are now filtered only by context (`when` clause) and file matching (globs). If a rule has no `when` clause, it applies in all contexts, but still respects glob patterns for file matching.
+- **BREAKING:** Removed `simplifyGlobsToParent` field. Use `outputIn` instead for clearer semantics.
+  - **Migration:** Replace `simplifyGlobsToParent: true` with `outputIn: common-parent`
+  - **Migration:** Replace `simplifyGlobsToParent: false` with `outputIn: parent`
+  - **Default:** If neither field is specified, defaults to `common-parent` (same as old behavior)
 
 ### Added
 - **Arbitrary variables in `when` clauses:** You can now use any variable from config in conditional rules, not just the legacy `env`/`role`/`language` fields
@@ -22,8 +26,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **New `outputIn` field for glob output control:** More intuitive control over where AGENTS.md files are created
   - `outputIn: matched` - Create output IN matched directories (for dir globs with trailing slash)
   - `outputIn: parent` - Create in parent of matched files (one per directory)
-  - `outputIn: common-parent` - Find common parent, create single output there
-  - Backward compatible: `simplifyGlobsToParent` still works (maps to outputIn values)
+  - `outputIn: common-parent` - Find common parent, create single output there (default)
   - Directory glob support: Patterns ending with `/` now match directories
 - **cAGENTS usage footer:** All generated files now include a footer with best practices
   - Explains `cagents build` and `cagents context` workflow

@@ -43,7 +43,7 @@ fn test_scenario_monorepo_with_context() {
                     None,
                     None,
                 )),
-                simplify_globs_to_parent: Some(false), ..Default::default()
+                output_in: Some("parent".to_string()), ..Default::default()
             },
             body: "Backend rules".to_string(),
             path: PathBuf::from("backend.md"),
@@ -59,7 +59,7 @@ fn test_scenario_monorepo_with_context() {
                     None,
                     None,
                 )),
-                simplify_globs_to_parent: Some(false), ..Default::default()
+                output_in: Some("parent".to_string()), ..Default::default()
             },
             body: "Frontend rules".to_string(),
             path: PathBuf::from("frontend.md"),
@@ -100,7 +100,7 @@ fn test_scenario_language_specific_rules() {
                     Some(vec!["Rust".to_string()]),
                     None,
                 )),
-                simplify_globs_to_parent: Some(false), ..Default::default()
+                output_in: Some("parent".to_string()), ..Default::default()
             },
             body: "Rust rules".to_string(),
             path: PathBuf::from("rust.md"),
@@ -115,7 +115,7 @@ fn test_scenario_language_specific_rules() {
                     Some(vec!["TypeScript".to_string()]),
                     None,
                 )),
-                simplify_globs_to_parent: Some(false), ..Default::default()
+                output_in: Some("parent".to_string()), ..Default::default()
             },
             body: "TS rules".to_string(),
             path: PathBuf::from("ts.md"),
@@ -161,7 +161,7 @@ fn test_scenario_mixed_always_apply_and_globs() {
             frontmatter: RuleFrontmatter {
                 name: Some("rust".to_string()),
                 globs: Some(vec!["**/*.rs".to_string()]),
-                simplify_globs_to_parent: Some(false), ..Default::default()
+                output_in: Some("parent".to_string()), ..Default::default()
             },
             body: "Rust rules".to_string(),
             path: PathBuf::from("rust.md"),
@@ -196,7 +196,7 @@ fn test_scenario_order_matters() {
                 name: Some("high".to_string()),
                 globs: Some(vec!["**/*.rs".to_string()]),
                 order: Some(100),
-                simplify_globs_to_parent: Some(false), ..Default::default()
+                output_in: Some("parent".to_string()), ..Default::default()
             },
             body: "High order".to_string(),
             path: PathBuf::from("high.md"),
@@ -206,7 +206,7 @@ fn test_scenario_order_matters() {
                 name: Some("low".to_string()),
                 globs: Some(vec!["**/*.rs".to_string()]),
                 order: Some(1),
-                simplify_globs_to_parent: Some(false), ..Default::default()
+                output_in: Some("parent".to_string()), ..Default::default()
             },
             body: "Low order".to_string(),
             path: PathBuf::from("low.md"),

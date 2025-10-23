@@ -8,73 +8,8 @@ on:
 concurrency: ${{ github.workflow }}-${{ github.ref }}
 
 jobs:
-  version-pr:
-    name: Create/Update Version PR
-    runs-on: ubuntu-latest
-    permissions:
-      contents: write
-      pull-requests: write
-    outputs:
-      published: ${{ steps.changesets.outputs.published }}
-      publishedPackages: ${{ steps.changesets.outputs.publishedPackages }}
-    steps:
-      - name: Generate token from centralbot
-        id: generate-token
-        uses: actions/create-github-app-token@v1
-        with:
-          app-id: ${{ secrets.CENTRALBOT_APP_ID }}
-          private-key: ${{ secrets.CENTRALBOT_PRIVATE_KEY }}
-
-      - name: Checkout Repo
-        uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
-          token: ${{ steps.generate-token.outputs.token }}
-
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: 20
-
-      - name: Setup pnpm
-        uses: pnpm/action-setup@v2
-        with:
-          version: 9
-
-      - name: Get pnpm store directory
-        shell: bash
-        run: |
-          echo "STORE_PATH=$(pnpm store path --silent)" >> $GITHUB_ENV
-
-      - uses: actions/cache@v3
-        name: Setup pnpm cache
-        with:
-          path: ${{ env.STORE_PATH }}
-          key: ${{ runner.os }}-pnpm-store-${{ hashFiles('**/pnpm-lock.yaml') }}
-          restore-keys: |
-            ${{ runner.os }}-pnpm-store-
-
-      - name: Install dependencies
-        run: pnpm -w i
-
-      - name: Setup Rust (needed for version sync)
-        uses: dtolnay/rust-toolchain@stable
-
-      - name: Create Version PR (if changesets exist)
-        id: changesets
-        uses: changesets/action@v1
-        with:
-          version: pnpm run version
-          title: "Release: Version Packages"
-          commit: "chore: version packages"
-          setupGitUser: true
-        env:
-          GITHUB_TOKEN: ${{ steps.generate-token.outputs.token }}
-
   build-binaries:
     name: Build Binaries
-    needs: version-pr
-    if: needs.version-pr.outputs.published == 'true'
     strategy:
       matrix:
         include:
@@ -114,15 +49,15 @@ jobs:
           name: binary-${{ matrix.target }}
           path: target/${{ matrix.target }}/release/${{ matrix.binary }}
           if-no-files-found: error
-          retention-days: 1
 
-  publish:
-    name: Publish to npm
-    needs: [version-pr, build-binaries]
-    if: needs.version-pr.outputs.published == 'true'
+  release:
+    name: Release
+    needs: build-binaries
     runs-on: ubuntu-latest
     permissions:
       contents: write
+      pull-requests: write
+      issues: write
     steps:
       - name: Generate token from centralbot
         id: generate-token
@@ -134,21 +69,40 @@ jobs:
       - name: Checkout Repo
         uses: actions/checkout@v4
         with:
+          # This makes Actions fetch all Git history so that Changesets can generate changelogs with the correct commits
+          fetch-depth: 0
           token: ${{ steps.generate-token.outputs.token }}
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
           node-version: 20
-          registry-url: 'https://registry.npmjs.org'
+          cache: 'npm'
 
       - name: Setup pnpm
         uses: pnpm/action-setup@v2
         with:
           version: 9
 
+      # Cache pnpm dependencies
+      - name: Get pnpm store directory
+        shell: bash
+        run: |
+          echo "STORE_PATH=$(pnpm store path --silent)" >> $GITHUB_ENV
+
+      - uses: actions/cache@v3
+        name: Setup pnpm cache
+        with:
+          path: ${{ env.STORE_PATH }}
+          key: ${{ runner.os }}-pnpm-store-${{ hashFiles('**/pnpm-lock.yaml') }}
+          restore-keys: |
+            ${{ runner.os }}-pnpm-store-
+
       - name: Install dependencies
         run: pnpm -w i
+
+      - name: Setup Rust (needed for version sync)
+        uses: dtolnay/rust-toolchain@stable
 
       - name: Download all binary artifacts
         uses: actions/download-artifact@v4
@@ -158,26 +112,38 @@ jobs:
       - name: Organize binaries for npm package
         run: |
           mkdir -p packages/cagents/bin
+          # Copy all binaries with platform-specific names
           cp artifacts/binary-x86_64-unknown-linux-gnu/cagents packages/cagents/bin/cagents-linux-x64
           cp artifacts/binary-x86_64-apple-darwin/cagents packages/cagents/bin/cagents-darwin-x64
           cp artifacts/binary-aarch64-apple-darwin/cagents packages/cagents/bin/cagents-darwin-arm64
           cp artifacts/binary-x86_64-pc-windows-msvc/cagents.exe packages/cagents/bin/cagents-win32-x64.exe
+          # Set permissions
           chmod +x packages/cagents/bin/cagents-*
           ls -lah packages/cagents/bin/
 
-      - name: Build npm package
-        run: pnpm --filter cagents run build
-
-      - name: Publish to npm
-        run: cd packages/cagents && npm publish --access public
+      - name: Create Release Pull Request or Publish to npm
+        id: changesets
+        uses: changesets/action@v1
+        with:
+          # This runs "pnpm run version" which calls changeset version + sync-versions.js
+          version: pnpm run version
+          # This runs "pnpm run release" which builds and publishes to npm
+          publish: pnpm run release
+          title: "Release: Version Packages"
+          commit: "chore: version packages"
+          setupGitUser: true
+          createGithubReleases: true
         env:
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+          GITHUB_TOKEN: ${{ steps.generate-token.outputs.token }}
+          NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
 
       - name: Create GitHub Release
+        if: steps.changesets.outputs.published == 'true'
         run: |
+          # Extract version from published packages
           VERSION=$(cat packages/cagents/package.json | jq -r '.version')
           gh release create "v${VERSION}" \
             --title "v${VERSION}" \
-            --notes "See [CHANGELOG.md](./packages/cagents/CHANGELOG.md) for details."
+            --notes "See [CHANGELOG.md](./CHANGELOG.md) for details."
         env:
           GITHUB_TOKEN: ${{ steps.generate-token.outputs.token }}

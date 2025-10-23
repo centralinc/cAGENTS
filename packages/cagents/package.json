@@ -1,12 +1,20 @@
 {
   "name": "cagents",
-  "version": "0.3.3",
-  "description": "Node wrapper for the cAGENTS CLI - AGENTS.md generator",
+  "version": "0.1.0",
+  "description": "cAGENTS - collected, composed, and compiled AGENTS.md",
+  "repository": {
+    "url": "git+https://github.com/centralinc/cAGENTS.git"
+  },
+  "bugs": {
+    "url": "https://github.com/centralinc/cAGENTS.git/issues"
+  },
+  "homepage": "https://github.com/centralinc/cAGENTS#readme",
+  "author": "jordan@central.inc",
+  "types": "dist/index.d.ts",
+  "main": "dist/index.js",
   "bin": {
     "cagents": "bin/cagents.js"
   },
-  "types": "dist/index.d.ts",
-  "main": "dist/index.js",
   "scripts": {
     "build": "tsc -p tsconfig.json",
     "test": "node --test dist/*.test.js",
@@ -39,14 +47,5 @@
     "markdown",
     "generators"
   ],
-  "license": "MIT",
-  "repository": {
-    "type": "git",
-    "url": "https://github.com/yourusername/cagents.git"
-  },
-  "bugs": {
-    "url": "https://github.com/yourusername/cagents/issues"
-  },
-  "homepage": "https://github.com/yourusername/cagents#readme",
-  "author": "Jordan <your-email@example.com>"
+  "license": "MIT"
 }

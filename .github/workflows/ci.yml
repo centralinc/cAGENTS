@@ -11,7 +11,11 @@ jobs:
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
-        os: [ubuntu-latest, macos-latest, windows-latest]
+        include:
+          - os: ubuntu-latest
+          - os: macos-13  # Intel x64
+          - os: macos-latest  # Apple Silicon ARM64
+          - os: windows-latest
     env:
       RUST_BACKTRACE: 1
       CARGO_TERM_COLOR: always
@@ -31,11 +35,24 @@ jobs:
       - name: Build Rust workspace
         run: cargo build --workspace --locked --all-targets
 
+      - name: Build release binary (for canary)
+        run: cargo build --release --workspace --locked
+
       - name: Run tests
         run: cargo test --workspace --locked -- --nocapture
 
       - name: Run clippy
         run: cargo clippy --workspace --all-targets --locked -- -D warnings
+
+      - name: Upload release binary artifact (for canary reuse)
+        if: github.event_name == 'pull_request'
+        uses: actions/upload-artifact@v4
+        with:
+          name: binary-${{ runner.os }}-${{ runner.arch }}
+          path: |
+            target/release/cagents${{ runner.os == 'Windows' && '.exe' || '' }}
+          retention-days: 1
+          if-no-files-found: error
       - name: Set up Node
         uses: actions/setup-node@v4
         with:

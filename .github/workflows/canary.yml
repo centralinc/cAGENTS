@@ -1,0 +1,256 @@
+name: Canary Release
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  version:
+    name: Generate Canary Version
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.canary-version.outputs.version }}
+    steps:
+      - name: Checkout Repo
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v2
+        with:
+          version: 9
+
+      - name: Install dependencies
+        run: pnpm -w i
+
+      - name: Create canary version
+        id: canary-version
+        run: |
+          # Create a temporary changeset if none exist
+          if [ ! "$(ls -A .changeset/*.md 2>/dev/null | grep -v README)" ]; then
+            cat << EOF > .changeset/canary-release.md
+          ---
+          "cagents": patch
+          ---
+
+          Canary release from PR #${{ github.event.pull_request.number }}
+          EOF
+          fi
+
+          # Generate snapshot version
+          pnpm changeset version --snapshot canary
+
+          # Get the new version
+          VERSION=$(node -p "require('./packages/cagents/package.json').version")
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+          echo "Generated canary version: $VERSION"
+
+      - name: Upload versioned package.json and Cargo.toml
+        uses: actions/upload-artifact@v4
+        with:
+          name: versioned-files
+          path: |
+            packages/cagents/package.json
+            Cargo.toml
+            .changeset/
+          retention-days: 1
+
+  build-binaries:
+    name: Build Canary Binaries
+    needs: version
+    strategy:
+      matrix:
+        include:
+          - os: ubuntu-latest
+            target: x86_64-unknown-linux-gnu
+            binary: cagents
+            artifact-name: cagents-linux-x64
+          - os: macos-13
+            target: x86_64-apple-darwin
+            binary: cagents
+            artifact-name: cagents-darwin-x64
+          - os: macos-latest
+            target: aarch64-apple-darwin
+            binary: cagents
+            artifact-name: cagents-darwin-arm64
+          - os: windows-latest
+            target: x86_64-pc-windows-msvc
+            binary: cagents.exe
+            artifact-name: cagents-win32-x64.exe
+    runs-on: ${{ matrix.os }}
+    steps:
+      - name: Checkout Repo
+        uses: actions/checkout@v4
+
+      - name: Download versioned files
+        uses: actions/download-artifact@v4
+        with:
+          name: versioned-files
+
+      - name: Sync version to Cargo workspace
+        run: |
+          # The downloaded Cargo.toml already has the right version
+          # Just need to update Cargo.lock
+          cargo update --workspace || true
+
+      - name: Setup Rust
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: ${{ matrix.target }}
+
+      - uses: Swatinem/rust-cache@v2
+        with:
+          key: ${{ matrix.target }}
+
+      - name: Build binary with canary version
+        run: |
+          echo "Building for ${{ matrix.target }} with version ${{ needs.version.outputs.version }}"
+          cargo build --release --target ${{ matrix.target }} --workspace
+
+          # Verify version
+          ./target/${{ matrix.target }}/release/${{ matrix.binary }} --version || true
+
+      - name: Upload binary artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: binary-${{ matrix.target }}
+          path: target/${{ matrix.target }}/release/${{ matrix.binary }}
+          retention-days: 1
+
+  canary:
+    name: Publish Canary
+    needs: [version, build-binaries]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pull-requests: write
+    steps:
+      - name: Generate token from centralbot
+        id: generate-token
+        uses: actions/create-github-app-token@v1
+        with:
+          app-id: ${{ secrets.CENTRALBOT_APP_ID }}
+          private-key: ${{ secrets.CENTRALBOT_PRIVATE_KEY }}
+
+      - name: Checkout Repo
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          token: ${{ steps.generate-token.outputs.token }}
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          registry-url: 'https://registry.npmjs.org'
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v2
+        with:
+          version: 9
+
+      - name: Get pnpm store directory
+        shell: bash
+        run: |
+          echo "STORE_PATH=$(pnpm store path --silent)" >> $GITHUB_ENV
+
+      - uses: actions/cache@v3
+        name: Setup pnpm cache
+        with:
+          path: ${{ env.STORE_PATH }}
+          key: ${{ runner.os }}-pnpm-store-${{ hashFiles('**/pnpm-lock.yaml') }}
+          restore-keys: |
+            ${{ runner.os }}-pnpm-store-
+
+      - name: Download versioned files
+        uses: actions/download-artifact@v4
+        with:
+          name: versioned-files
+
+      - name: Install dependencies
+        run: pnpm -w i
+
+      - name: Download all binary artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: artifacts/
+          pattern: binary-*
+          merge-multiple: false
+
+      - name: Organize binaries for npm package
+        run: |
+          mkdir -p packages/cagents/bin
+
+          # Copy all binaries with platform-specific names
+          cp artifacts/binary-x86_64-unknown-linux-gnu/cagents packages/cagents/bin/cagents-linux-x64
+          cp artifacts/binary-x86_64-apple-darwin/cagents packages/cagents/bin/cagents-darwin-x64
+          cp artifacts/binary-aarch64-apple-darwin/cagents packages/cagents/bin/cagents-darwin-arm64
+          cp artifacts/binary-x86_64-pc-windows-msvc/cagents.exe packages/cagents/bin/cagents-win32-x64.exe
+
+          # Set permissions
+          chmod +x packages/cagents/bin/cagents-*
+
+          echo "Canary binaries packaged:"
+          ls -lah packages/cagents/bin/
+
+      - name: Build npm package
+        run: pnpm --filter cagents run build
+
+      - name: Publish to npm with @canary tag
+        run: cd packages/cagents && npm publish --tag canary --access public
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+
+      - name: Set version env var for PR comment
+        run: echo "CANARY_VERSION=${{ needs.version.outputs.version }}" >> $GITHUB_ENV
+
+      - name: Comment on PR
+        uses: actions/github-script@v7
+        with:
+          github-token: ${{ steps.generate-token.outputs.token }}
+          script: |
+            const version = process.env.CANARY_VERSION;
+            const body = `🚀 **Canary version published!**
+
+            \`\`\`bash
+            npm install cagents@${version}
+            # or
+            npm install cagents@canary
+            \`\`\`
+
+            This version will be available for testing until the next canary is published.`;
+
+            // Find existing canary comment
+            const { data: comments } = await github.rest.issues.listComments({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.issue.number,
+            });
+
+            const botComment = comments.find(comment =>
+              comment.user.type === 'Bot' &&
+              comment.body.includes('Canary version published')
+            );
+
+            if (botComment) {
+              // Update existing comment
+              await github.rest.issues.updateComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                comment_id: botComment.id,
+                body: body
+              });
+            } else {
+              // Create new comment
+              await github.rest.issues.createComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: context.issue.number,
+                body: body
+              });
+            }

@@ -2,7 +2,7 @@
 
 **Dynamic, context-aware AI coding rules from composable templates.**
 
-⚠️ **Alpha** - Build from source only. npm package coming soon.
+⚠️ **Alpha (v0.1.0)** - Core features work, but expect rough edges and breaking changes. Beta releases available with `@beta` tag.
 
 ---
 
@@ -18,7 +18,19 @@ A CLI that generates `AGENTS.md` from small, composable templates. Different con
 
 ## Installation
 
-### From Source (Current)
+### npm/pnpm (Recommended)
+
+```bash
+# Install as a dev dependency
+npm install --save-dev cagents
+
+# Or using pnpm
+pnpm add -D cagents
+```
+
+The package includes pre-built binaries for Linux, macOS (x64/ARM64), and Windows.
+
+### From Source (For Development)
 
 ```bash
 git clone https://github.com/centralinc/cAGENTS.git
@@ -26,13 +38,6 @@ cd cAGENTS
 cargo build --release --workspace
 
 # Binary at: target/release/cagents
-```
-
-### npm Package (Coming Soon)
-
-```bash
-# Not yet available
-npm install -g cagents
 ```
 
 ---

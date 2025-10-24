@@ -1,5 +1,12 @@
 # cagents
 
+## 0.4.1
+
+### Patch Changes
+
+- 686ecb1: Fix nested file detection in multi-format migration. When using 'merge all formats' option, nested AGENTS.md and CLAUDE.md files are now properly discovered and imported, matching the behavior of single-format migration.
+- 4c77de2: fix deploy
+
 ## 0.4.0
 
 ### Minor Changes

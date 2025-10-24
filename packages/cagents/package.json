@@ -1,6 +1,6 @@
 {
   "name": "cagents",
-  "version": "0.4.1",
+  "version": "0.5.0",
   "description": "cAGENTS - collected, composed, and compiled AGENTS.md",
   "repository": {
     "url": "git+https://github.com/centralinc/cAGENTS.git"

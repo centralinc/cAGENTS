@@ -4,9 +4,13 @@
 // Note: These tests use brackets in directory names which are valid on Unix/macOS
 // but may have issues on Windows. Tests are Unix-only to avoid filesystem limitations.
 
+#[cfg(unix)]
 use anyhow::Result;
+#[cfg(unix)]
 use serial_test::serial;
+#[cfg(unix)]
 use std::fs;
+#[cfg(unix)]
 use tempfile::TempDir;
 
 #[test]

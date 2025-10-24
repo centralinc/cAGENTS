@@ -130,14 +130,6 @@ pub fn unignore_outputs() -> Result<()> {
     Ok(())
 }
 
-/// Add .cAGENTS local config patterns to root .gitignore during init
-/// DEPRECATED: No longer used - we only manage .cAGENTS/.gitignore now
-#[allow(dead_code)]
-pub fn update_gitignore_for_init() -> Result<()> {
-    // No-op: Users should manage their root .gitignore themselves
-    Ok(())
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -172,23 +164,6 @@ mod tests {
         let content = fs::read_to_string(".gitignore").unwrap();
         assert!(content.contains("node_modules"));
         assert!(content.contains("AGENTS.md"));
-    }
-
-    #[test]
-    #[serial]
-    fn test_update_gitignore_for_init_is_noop() {
-        let tmp = TempDir::new().unwrap();
-        let _guard = TestDirGuard::new(tmp.path());
-
-        // Create existing .gitignore
-        fs::write(".gitignore", "node_modules\ntarget\n").unwrap();
-
-        update_gitignore_for_init().unwrap();
-
-        let content = fs::read_to_string(".gitignore").unwrap();
-        // Should NOT be modified - function is now a no-op
-        assert!(!content.contains(".cAGENTS"));
-        assert_eq!(content, "node_modules\ntarget\n");
     }
 
     /// RAII guard to safely change directory for tests

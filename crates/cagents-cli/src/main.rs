@@ -26,8 +26,6 @@ enum Command {
         #[arg(long)] out: Option<String>,
         #[arg(long)] dry_run: bool,
     },
-    /// Export Cursor .mdc files from rules
-    Export { #[arg(long, default_value="cursor")] target: String },
     /// Validate configuration and rules
     Lint,
     /// Preview build output with rendered content for all files
@@ -35,8 +33,6 @@ enum Command {
         #[arg(default_value = ".")]
         path: String
     },
-    /// Manage configuration interactively
-    Config,
     /// Migrate from other formats (.cursorrules, .cursor/rules, AGENTS.md, CLAUDE.md)
     Migrate {
         #[arg(long)]
@@ -90,10 +86,8 @@ fn main() -> Result<()> {
     match cli.cmd {
         Command::Init{preset, force, dry_run, backup} => cagents_core::cmd_init(&preset, force, dry_run, backup)?,
         Command::Build{out,dry_run} => cagents_core::cmd_build(out, dry_run)?,
-        Command::Export{target} => cagents_core::cmd_export(&target)?,
         Command::Lint => cagents_core::cmd_lint()?,
         Command::Preview{path} => cagents_core::cmd_preview(&path)?,
-        Command::Config => cagents_core::cmd_config()?,
         Command::Migrate{from, backup} => cagents_core::cmd_migrate(from.as_deref(), backup)?,
         Command::Git{action} => {
             match action {

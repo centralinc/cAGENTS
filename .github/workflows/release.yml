@@ -14,7 +14,7 @@ jobs:
       matrix:
         include:
           - os: ubuntu-latest
-            target: x86_64-unknown-linux-gnu
+            target: x86_64-unknown-linux-musl
             binary: cagents
           - os: macos-latest
             target: x86_64-apple-darwin
@@ -29,6 +29,10 @@ jobs:
     steps:
       - name: Checkout Repo
         uses: actions/checkout@v4
+
+      - name: Install musl tools (Linux only)
+        if: matrix.target == 'x86_64-unknown-linux-musl'
+        run: sudo apt-get update && sudo apt-get install -y musl-tools
 
       - name: Setup Rust
         uses: dtolnay/rust-toolchain@stable
@@ -113,7 +117,7 @@ jobs:
         run: |
           mkdir -p packages/cagents/bin
           # Copy all binaries with platform-specific names
-          cp artifacts/binary-x86_64-unknown-linux-gnu/cagents packages/cagents/bin/cagents-linux-x64
+          cp artifacts/binary-x86_64-unknown-linux-musl/cagents packages/cagents/bin/cagents-linux-x64
           cp artifacts/binary-x86_64-apple-darwin/cagents packages/cagents/bin/cagents-darwin-x64
           cp artifacts/binary-aarch64-apple-darwin/cagents packages/cagents/bin/cagents-darwin-arm64
           cp artifacts/binary-x86_64-pc-windows-msvc/cagents.exe packages/cagents/bin/cagents-win32-x64.exe

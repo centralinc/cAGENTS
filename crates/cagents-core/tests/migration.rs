@@ -81,13 +81,13 @@ fn test_import_multiple_formats_with_targets() {
     assert!(config_content.contains("claude-md"), "Config should have claude-md target");
 
     // Check AGENTS.md template has target filter for agents-md
-    let agents_template = fs::read_to_string(".cAGENTS/templates/agents-from-agentsmd.md").unwrap();
+    let agents_template = fs::read_to_string(".cAGENTS/templates/agents-root.md").unwrap();
     assert!(agents_template.contains("when:"), "Template should have when section");
     assert!(agents_template.contains("target: [\"agents-md\"]"), "Template should filter to agents-md");
     assert!(agents_template.contains("# Agents Content"), "Template should have original content");
 
     // Check CLAUDE.md template has target filter for claude-md
-    let claude_template = fs::read_to_string(".cAGENTS/templates/agents-from-claudemd.md").unwrap();
+    let claude_template = fs::read_to_string(".cAGENTS/templates/claude-root.md").unwrap();
     assert!(claude_template.contains("when:"), "Template should have when section");
     assert!(claude_template.contains("target: [\"claude-md\"]"), "Template should filter to claude-md");
     assert!(claude_template.contains("# Claude Content"), "Template should have original content");

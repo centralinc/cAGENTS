@@ -17,19 +17,19 @@ fn test_agents_md_footer_only_in_root() {
     cagents_core::writers::agents_md::write_agents_md(&nested_dir, nested_content, false)
         .unwrap();
 
-    // Read root AGENTS.md - should have footer
+    // Read root AGENTS.md - should have header
     let root_written = fs::read_to_string(temp_dir.path().join("AGENTS.md")).unwrap();
     assert!(
-        root_written.contains("Working with cAGENTS"),
-        "Root AGENTS.md should contain footer"
+        root_written.contains("**IMPORTANT**: This project uses **cAGENTS**"),
+        "Root AGENTS.md should contain header"
     );
     assert!(root_written.contains("# Root Rules"));
 
-    // Read nested AGENTS.md - should NOT have footer
+    // Read nested AGENTS.md - should also have header
     let nested_written = fs::read_to_string(nested_dir.join("AGENTS.md")).unwrap();
     assert!(
-        !nested_written.contains("Working with cAGENTS"),
-        "Nested AGENTS.md should NOT contain footer"
+        nested_written.contains("**IMPORTANT**: This project uses **cAGENTS**"),
+        "Nested AGENTS.md should also contain header"
     );
     assert!(nested_written.contains("# Nested Rules"));
 }
@@ -50,19 +50,19 @@ fn test_claude_md_footer_only_in_root() {
     cagents_core::writers::claude_md::write_claude_md(&nested_dir, nested_content, false)
         .unwrap();
 
-    // Read root CLAUDE.md - should have footer
+    // Read root CLAUDE.md - should have header
     let root_written = fs::read_to_string(temp_dir.path().join("CLAUDE.md")).unwrap();
     assert!(
-        root_written.contains("Working with cAGENTS"),
-        "Root CLAUDE.md should contain footer"
+        root_written.contains("**IMPORTANT**: This project uses **cAGENTS**"),
+        "Root CLAUDE.md should contain header"
     );
     assert!(root_written.contains("# Root Claude Rules"));
 
-    // Read nested CLAUDE.md - should NOT have footer
+    // Read nested CLAUDE.md - should also have header
     let nested_written = fs::read_to_string(nested_dir.join("CLAUDE.md")).unwrap();
     assert!(
-        !nested_written.contains("Working with cAGENTS"),
-        "Nested CLAUDE.md should NOT contain footer"
+        nested_written.contains("**IMPORTANT**: This project uses **cAGENTS**"),
+        "Nested CLAUDE.md should also contain header"
     );
     assert!(nested_written.contains("# Nested Claude Rules"));
 }

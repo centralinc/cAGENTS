@@ -555,6 +555,20 @@ project = "imported-from-claude-md"
     Ok(())
 }
 
+/// Helper function to merge content from nested files with a given filename
+fn merge_nested_files(filename: &str) -> Result<(String, Vec<PathBuf>)> {
+    let mut combined = String::new();
+    let locations = find_all_files_named(filename);
+
+    for location in &locations {
+        let file_content = fs::read_to_string(location)?;
+        combined.push_str(&file_content);
+        combined.push_str("\n\n");
+    }
+
+    Ok((combined, locations))
+}
+
 /// Import and merge multiple formats into separate templates
 pub fn import_multiple_formats(formats: &[ImportFormat], backup: bool) -> Result<()> {
     if formats.is_empty() {
@@ -616,18 +630,21 @@ project = "imported-merged"
 "#, targets_config);
     fs::write(cagents_dir.join("config.toml"), config)?;
 
+    // Cache file lists for formats that need them (for later removal phase)
+    use std::collections::HashMap;
+    let mut cached_file_lists: HashMap<String, Vec<PathBuf>> = HashMap::new();
+
     // Import each format as a separate template
     let mut imported_count = 0;
     for (idx, format) in formats.iter().enumerate() {
-        let path = format.file_path();
-
-        let (content, backup_path) = match format {
+        let content = match format {
             ImportFormat::CursorLegacy => {
-                let content = fs::read_to_string(&path)?;
-                (content, PathBuf::from(".cursorrules.backup"))
+                let path = format.file_path();
+                fs::read_to_string(&path)?
             }
             ImportFormat::CursorModern => {
                 // For modern cursor, concatenate all files (recursively)
+                let path = format.file_path();
                 let mut combined = String::new();
                 let md_files = collect_md_files_recursive(&path)?;
                 for file_path in md_files {
@@ -635,15 +652,17 @@ project = "imported-merged"
                     combined.push_str(&file_content);
                     combined.push_str("\n\n");
                 }
-                (combined, PathBuf::from(".cursor/rules.backup"))
+                combined
             }
             ImportFormat::AgentsMd => {
-                let content = fs::read_to_string(&path)?;
-                (content, PathBuf::from("AGENTS.md.backup"))
+                let (content, locations) = merge_nested_files("AGENTS.md")?;
+                cached_file_lists.insert("AGENTS.md".to_string(), locations);
+                content
             }
             ImportFormat::ClaudeMd => {
-                let content = fs::read_to_string(&path)?;
-                (content, PathBuf::from("CLAUDE.md.backup"))
+                let (content, locations) = merge_nested_files("CLAUDE.md")?;
+                cached_file_lists.insert("CLAUDE.md".to_string(), locations);
+                content
             }
         };
 
@@ -671,13 +690,6 @@ order: {}
 
         fs::write(templates_dir.join(format!("{}.md", template_name)), template)?;
 
-        // Backup original (if requested)
-        if backup {
-            if let Err(e) = fs::copy(&path, &backup_path) {
-                eprintln!("Warning: Could not backup {}: {}", path.display(), e);
-            }
-        }
-
         imported_count += 1;
     }
 
@@ -687,20 +699,52 @@ order: {}
     for format in formats {
         match format {
             ImportFormat::CursorLegacy => {
-                fs::remove_file(".cursorrules").ok();
+                let path = format.file_path();
+                if backup {
+                    if let Err(e) = fs::copy(&path, ".cursorrules.backup") {
+                        eprintln!("Warning: Could not backup {}: {}", path.display(), e);
+                    }
+                }
+                fs::remove_file(&path).ok();
                 println!("  ✓ Removed original .cursorrules");
             }
             ImportFormat::CursorModern => {
-                fs::remove_dir_all(".cursor/rules").ok();
+                let path = format.file_path();
+                if backup {
+                    // Note: Can't easily backup a whole directory, skipping for now
+                }
+                fs::remove_dir_all(&path).ok();
                 println!("  ✓ Removed original .cursor/rules");
             }
             ImportFormat::AgentsMd => {
-                fs::remove_file("AGENTS.md").ok();
-                println!("  ✓ Removed original AGENTS.md");
+                // Reuse cached file list from merge step
+                if let Some(locations) = cached_file_lists.get("AGENTS.md") {
+                    for location in locations {
+                        if backup {
+                            let backup_path = location.with_extension("md.backup");
+                            if let Err(e) = fs::copy(location, &backup_path) {
+                                eprintln!("Warning: Could not backup {}: {}", location.display(), e);
+                            }
+                        }
+                        fs::remove_file(location).ok();
+                    }
+                    println!("  ✓ Removed {} AGENTS.md file(s)", locations.len());
+                }
             }
             ImportFormat::ClaudeMd => {
-                fs::remove_file("CLAUDE.md").ok();
-                println!("  ✓ Removed original CLAUDE.md");
+                // Reuse cached file list from merge step
+                if let Some(locations) = cached_file_lists.get("CLAUDE.md") {
+                    for location in locations {
+                        if backup {
+                            let backup_path = location.with_extension("md.backup");
+                            if let Err(e) = fs::copy(location, &backup_path) {
+                                eprintln!("Warning: Could not backup {}: {}", location.display(), e);
+                            }
+                        }
+                        fs::remove_file(location).ok();
+                    }
+                    println!("  ✓ Removed {} CLAUDE.md file(s)", locations.len());
+                }
             }
         }
     }

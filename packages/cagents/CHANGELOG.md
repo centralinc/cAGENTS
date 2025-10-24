@@ -1,5 +1,11 @@
 # cagents
 
+## 0.5.0
+
+### Minor Changes
+
+- d52df8d: clean up for launch
+
 ## 0.4.1
 
 ### Patch Changes

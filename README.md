@@ -1,463 +1,251 @@
 # cAGENTS
 
-**Dynamic, context-aware AI coding rules from composable templates.**
+**Compose AI coding rules from templates. Generate `AGENTS.md`, `CLAUDE.md`, and Cursor rules from a single source.**
+
+Stop maintaining multiple static instruction files. Write small, focused templates that compose into context-aware rules for any AI coding tool.
+Useful for monorepos, defining personal agent instructions, and defining cloud agent rules vs local agent rules.
 
 ```
-⚠️ Alpha Software (v0.1.0) - Core features work, but expect rough edges and breaking changes.
-Beta releases available with --tag beta for early testing.
+⚠️ Software in Alpha - Core features work, but expect rough edges and breaking changes.
 ```
-
-## Why cAGENTS?
-
-AGENTS.md is becoming the standard for AI coding context. But static files have limitations:
-
-- **No context adaptation** - Every AI sees the same rules, whether you're in a local dev env or cloud coding agent.
-- **No format flexibility** - Can't easily generate AGENTS.md, CLAUDE.md, and Cursor rules from the same source
-- **No location awareness** - Monorepos need different rules per package, but maintaining multiple files is tedious
-
-**cAGENTS solves this** by letting you write small, focused templates that compose into dynamic AGENTS.md files. Templates can target specific file patterns, environments, or output formats.
 
 ---
 
-## Getting Started
-
-### Installation
+## Quick Start
 
 ```bash
-# Install as a dev dependency
+# Install
 npm install --save-dev cagents
 
-# Or using pnpm
-pnpm add -D cagents
+# Initialize
+npx cagents init
+
+# Create templates in .cAGENTS/templates/
+# Build outputs
+npx cagents build
 ```
 
-### Initialize
+---
 
-```bash
-pnpm cagents init
+## Example: Conditional Rules
+
+Here's a simple example that inspired cAGENTS:
+
+**Config** (`.cAGENTS/config.toml`):
+```toml
+[output]
+targets = ["agents-md", "claude-md"]
+
+[defaults]
+engine = "builtin:simple"
+
+[variables.command]
+use_beads = "command -v bd >/dev/null 2>&1 && echo true || echo false"
 ```
 
-This creates:
-- `.cAGENTS/config.toml` - Configuration file
-- `.cAGENTS/templates/` - Directory for your templates
-- `.cAGENTS/.gitignore` - Local config overrides
+**Template** (`.cAGENTS/templates/beads.md`):
+```markdown
+---
+name: beads
+when:
+  use_beads: "true"
+order: 20
+---
 
-### Create Templates
+## Issue Tracking with bd (beads)
 
-Templates are Markdown files with YAML frontmatter:
+**IMPORTANT**: This project uses **bd** for ALL issue tracking.
+
+Quick commands:
+- Check ready work: `bd ready --json`
+- Create issue: `bd create "Title" -t bug|feature -p 0-4`
+- Update status: `bd update bd-42 --status in_progress`
+```
+
+**How it works:**
+- The `use_beads` variable runs a shell command checking if `bd` is installed
+- If `bd` is available → template included in AGENTS.md
+- If not → template skipped
+- Same templates, different contexts
+
+**Use cases:**
+- Developers with `bd` installed get full tracking instructions
+- Cloud agents without `bd` get clean AGENTS.md without the noise
+- New contributors see only what's relevant to their environment
+
+---
+
+## Core Concepts
+
+### Templates
+
+Markdown files with YAML frontmatter in `.cAGENTS/templates/`:
 
 ```markdown
 ---
-name: project-guidelines
-order: 1
+name: typescript-rules
+order: 10
 ---
-# Project Guidelines
+# TypeScript Guidelines
 
-Use TypeScript for all new code.
-Write tests alongside implementation.
+Use strict mode. Prefer functional components.
 ```
 
-Save templates in `.cAGENTS/templates/`.
-
-### Build
-
-```bash
-cagents build
-```
-
-This generates `AGENTS.md` (and any other configured outputs) from your templates.
-
-### Migrate Existing Rules
-
-If you already have AGENTS.md, CLAUDE.md, .cursorrules, or Cursor rules:
-
-```bash
-cagents migrate
-```
-
-This converts your existing rules into .cAGENTS templates.
-
----
-
-## Simple Implementation
-
-The simplest way to use cAGENTS:
-
-1. **Add AGENTS.md to .gitignore** so generated files aren't committed:
-   ```bash
-   cagents git ignore-outputs
-   ```
-
-2. **Hook up build to postinstall** so AGENTS.md is regenerated on every install:
-   ```json
-   {
-     "scripts": {
-       "postinstall": "cagents build"
-     }
-   }
-   ```
-
-Now your AGENTS.md is always fresh and generated from your templates. Team members get the right context automatically when they install dependencies, and cloud coding agents (like Codex Cloud) can generate environment-specific rules on the fly.
-
----
-
-## Configuration
-
-### Config File: `.cAGENTS/config.toml`
-
-```toml
-[paths]
-templatesDir = "templates"    # Where templates live
-outputRoot = "."              # Where to write AGENTS.md
-
-[defaults]
-engine = "builtin:simple"     # Template engine (builtin:simple or command:<cmd>)
-
-[variables.static]
-project = "myapp"             # Static variables for templates
-owner = "Your Name"
-
-[variables.command]
-branch = "git rev-parse --abbrev-ref HEAD"   # Dynamic variables from shell commands
-
-[execution]
-shell = "bash"
-timeoutMs = 3000
-
-[output]
-targets = ["agents-md"]       # Output formats: agents-md, claude-md, cursorrules
-```
-
-**Config Precedence** (later overrides earlier):
-1. `~/.cagents/config.toml` - User defaults (optional)
-2. `.cAGENTS/config.toml` - Project config (committed)
-3. `.cAGENTS/config.local.toml` - Local overrides (gitignored)
-
-### Template Frontmatter
+### Conditional Rendering
 
 ```yaml
 ---
-name: template-name              # Required: unique identifier
-description: What this does      # Optional: human-readable description
-engine: builtin:simple           # Optional: override config engine
-globs:                           # Optional: generate nested AGENTS.md in matching dirs
-  - "src/api/**"
-  - "tests/**"
-when:                            # Optional: conditional inclusion
-  app_env: ["production"]        # Only include when app_env variable matches
-  language: ["rust"]             # Only include when language variable matches
-  target: ["agents-md"]          # Only include for specific output formats
-                                 # NOTE: No when clause = rule applies everywhere
-order: 10                        # Optional: sort order (default: 50, lower = earlier)
-targets: ["agents-md", "cursor"] # Optional: which outputs get this template
+when:
+  env: ["production"]      # Environment-specific
+  language: ["typescript"]  # Language-specific
+  use_beads: "true"        # Tool availability
 ---
-# Your template content here
-
-Use variables: {{project}}, {{owner}}, {{branch}}
 ```
 
-### Variables
+### Multiple Outputs
 
-**Static variables** (defined in config):
 ```toml
-[variables.static]
-project = "myapp"
-api_url = "https://api.example.com"
+[output]
+targets = ["agents-md", "claude-md", "cursorrules"]
 ```
 
-**Command variables** (executed at build time):
-```toml
-[variables.command]
-branch = "git rev-parse --abbrev-ref HEAD"
-commit = "git rev-parse --short HEAD"
+One build, three formats.
+
+### Nested Files
+
+```yaml
+---
+globs: ["packages/api/**"]
+outputIn: "matched"
+---
 ```
 
-Use in templates: `{{project}}`, `{{branch}}`, etc.
+Creates `packages/api/AGENTS.md` with package-specific rules.
 
-### Template Engines
+---
 
-**Built-in engine** (`builtin:simple`):
-- Simple `{{variable}}` substitution
-- No conditionals or loops
-- Fast and reliable
+## Migration
 
-**External engines** (`command:<cmd>`):
-```toml
-[defaults]
-engine = "command:python3 scripts/render.py"
+Already have rules?
+
+```bash
+npx cagents migrate
 ```
 
-Your command receives JSON on stdin:
+Converts AGENTS.md, CLAUDE.md, .cursorrules, or .cursor/rules/ into templates.
+
+---
+
+## Recommended Setup
+
+> **🎯 Best Practice:** Don't commit generated files. Let cAGENTS rebuild them on every install.
+
+This ensures everyone (and every environment) gets the right context automatically.
+
+### Step 1: Gitignore Generated Files
+
+```bash
+npx cagents git ignore-outputs
+```
+
+This adds to `.gitignore`:
+```gitignore
+# cAGENTS outputs (generated, not committed)
+AGENTS.md
+CLAUDE.md
+.cursorrules
+**/AGENTS.md
+**/CLAUDE.md
+```
+
+### Step 2: Auto-Build on Install
+
+**package.json:**
 ```json
 {
-  "templateSource": "template content...",
-  "data": {"project": "myapp", ...},
-  "frontmatter": {...},
-  "templatePath": ".cAGENTS/templates/example.md"
+  "scripts": {
+    "postinstall": "cagents build"
+  }
 }
 ```
 
-And returns JSON on stdout:
+**pnpm:**
 ```json
 {
-  "content": "rendered content..."
+  "scripts": {
+    "prepare": "cagents build"
+  }
 }
 ```
 
-This lets you use Jinja2, Handlebars, Liquid, or any template engine you prefer.
+### Step 3: Delete Generated Files from Git
+
+If you've already committed AGENTS.md:
+
+```bash
+git rm AGENTS.md CLAUDE.md .cursorrules
+git rm -r --cached '**/AGENTS.md' '**/CLAUDE.md'  # Remove nested files
+git commit -m "chore: remove generated files, now built via cagents"
+```
+
+### Result
+
+✅ **Templates** are version controlled (`.cAGENTS/templates/`)
+✅ **Generated files** are rebuilt on every `npm install`
+✅ **Context** is always fresh and environment-specific
+✅ **No merge conflicts** on generated files
+
+---
+
+## Advanced
+
+For advanced features:
+- Custom template engines (Handlebars, Jinja2, Liquid)
+- Complex glob patterns
+- Output strategies
+- Monorepo configurations
+
+See [ADVANCED.md](./ADVANCED.md)
 
 ---
 
 ## Commands
 
-### `cagents init`
+Quick reference:
+- `cagents init` - Initialize .cAGENTS
+- `cagents build` - Generate outputs
+- `cagents migrate` - Import existing rules
+- `cagents lint` - Validate config
+- `cagents preview` - Preview build
+- `cagents render <file>` - Render context for file
+- `cagents context <file>` - Show metadata for file
 
-Initialize .cAGENTS in your project.
-
-```bash
-cagents init              # Create basic setup
-cagents init --force      # Overwrite existing setup
-cagents init --dry-run    # Show what would be created
-```
-
-### `cagents build`
-
-Generate AGENTS.md files from templates.
-
-```bash
-cagents build                    # Build with all templates
-cagents build --dry-run          # Preview without writing
-```
-
-Use config variables for conditional rules:
-
-```toml
-# .cAGENTS/config.toml
-[variables.command]
-app_env = "echo $APP_ENV"        # Execute command to get value
-language = "echo rust"           # Can be static or dynamic
-
-# Or use static variables
-[variables.static]
-app_env = "production"
-language = "rust"
-```
-
-**How it works:**
-1. Loads config with precedence (user → project → local)
-2. Discovers templates in `templatesDir`
-3. Filters by `when` clauses and context flags
-4. Renders using configured engine
-5. Merges rendered content
-6. Writes AGENTS.md files (nested based on globs)
-7. Cleans up old AGENTS.md files that no longer match
-
-### `cagents migrate`
-
-Migrate from other formats to .cAGENTS.
-
-```bash
-cagents migrate              # Auto-detect and convert
-cagents migrate --from .cursorrules
-cagents migrate --backup     # Backup originals before converting
-```
-
-**Supported formats:**
-- `.cursorrules` (Cursor legacy)
-- `.cursor/rules/` (Cursor modern)
-- `AGENTS.md`
-- `CLAUDE.md`
-
-### `cagents lint`
-
-Validate configuration and templates.
-
-```bash
-cagents lint
-```
-
-Checks:
-- Config file is valid TOML
-- All templates have required frontmatter
-- No glob conflicts
-- No unreachable templates
-
-### `cagents preview`
-
-Preview build output before writing files.
-
-```bash
-cagents preview
-```
-
-Shows:
-- Which files will be generated
-- Which templates contribute to each file
-- First 20 lines of rendered output
-- Interactive navigation (if multiple files)
-
-### `cagents render <file>`
-
-Render AGENTS.md context for a specific file.
-
-```bash
-cagents render src/api/users.rs              # Render to stdout
-cagents render src/api/users.rs > context.md # Save to file
-cagents render src/api/users.rs --var team=platform --var feature=auth
-```
-
-Useful for:
-- Testing which rules apply to a file
-- Generating context for specific files
-- Debugging template matching
-
-### `cagents context <file>`
-
-Show metadata about which rules apply to a file.
-
-```bash
-cagents context src/api/users.rs
-cagents context src/api/users.rs --json         # JSON output
-cagents context src/api/users.rs --var team=platform
-```
-
-Shows:
-- Matched rules and why they matched
-- Available variables and their values
-- File information (path, extension, directory)
-
-### `cagents status`
-
-Show project stats and info.
-
-```bash
-cagents status
-```
-
-Displays:
-- Configuration path
-- Number of templates found
-- Output directory
-- Whether AGENTS.md exists
-- List of all templates
-
-### `cagents config`
-
-View current configuration (deprecated - just edit the file directly).
-
-```bash
-cagents config              # View config
-```
-
-**Note:** It's easier to just edit `.cAGENTS/config.toml` directly or use `$EDITOR .cAGENTS/config.toml`.
-
-### `cagents export`
-
-Export to other formats (deprecated - use `build` with `[output]` config instead).
-
-```bash
-cagents export --target cursor
-```
-
-**Note:** Use the `[output]` section in your config instead:
-```toml
-[output]
-targets = ["agents-md", "claude-md", "cursorrules"]
-```
-
-Then `cagents build` will generate all formats.
-
-### `cagents git`
-
-Manage .gitignore for AGENTS.md files.
-
-```bash
-cagents git ignore-outputs     # Add AGENTS.md to .gitignore
-cagents git unignore-outputs   # Remove from .gitignore
-```
-
-### `cagents setup`
-
-Setup package manager integration.
-
-```bash
-cagents setup npm        # Add cagents commands to package.json
-cagents setup pnpm       # Works with pnpm too
-```
+See [COMMANDS.md](./COMMANDS.md) for full reference.
 
 ---
 
-## Tips
+## Why?
 
-**Monorepos:** Use globs to generate AGENTS.md in each package:
+**Problem:** Static `AGENTS.md` files can't adapt to context.
 
-```yaml
----
-name: web-app-rules
-globs: ["apps/web/**"]
----
-# Web App Rules
-...
-```
+Every developer and AI sees the same rules, regardless of:
+- Environment (local vs cloud vs production)
+- Tools available (linters, issue trackers)
+- Project area (frontend vs backend vs infra)
 
-This creates `apps/web/AGENTS.md` with just the rules that match `apps/web/**`.
+**Solution:** Compose from templates. Generate context-aware output.
 
-**Cloud coding agent rules:**
-
-Add extra context based on environment variables:
-
-```toml
-# In .cAGENTS/config.toml
-[variables.command]
-app_env = "echo $APP_ENV"      # Read from environment
-region = "echo $AWS_REGION"
-```
-
-```yaml
----
-name: cloud-agent-context
-when:
-  app_env: ["production", "staging"]    # Only apply when APP_ENV matches
-  region: ["us-west-2"]                 # And region matches
----
-# Cloud Agent Context
-
-This project uses a microservices architecture deployed on AWS.
-API documentation: https://api.example.com/docs
-Architecture diagrams: https://wiki.example.com/architecture
-...
-```
-
-Now the template only applies when your environment variables match the conditions. The `when` clause supports:
-- **Legacy fields:** `env`, `role`, `language`, `target` (still supported via CLI flags)
-- **Arbitrary variables:** Any variable defined in config can be used in `when` conditionals
-
-**Note:** Rules with no `when` clause apply everywhere. This is the recommended approach for base guidelines.
-
-**Multiple output formats:**
-
-```toml
-[output]
-targets = ["agents-md", "claude-md", "cursorrules"]
-```
-
-One `cagents build` generates all formats.
-
-**Template organization:**
-
-```
-.cAGENTS/templates/
-├── base-guidelines.md       # no when/globs = applies everywhere
-├── rust-rules.md            # globs: ["**/*.rs"]
-├── typescript-rules.md      # globs: ["**/*.ts"]
-└── cloud-agent-context.md   # when: { env: ["codex-cloud"] }
-```
+**Benefits:**
+- **DRY** - Write once, use everywhere
+- **Context-aware** - Different rules for different contexts
+- **Multi-format** - AGENTS.md, CLAUDE.md, .cursorrules from one source
+- **Monorepo-friendly** - Per-package rules without duplication
 
 ---
 
 ## License
 
-MIT - See [LICENSE](./LICENSE)
+MIT
 
 ---
 

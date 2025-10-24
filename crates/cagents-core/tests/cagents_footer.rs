@@ -44,10 +44,9 @@ name: test
 
     std::env::set_current_dir(original).unwrap();
 
-    // Verify footer exists
-    assert!(content.contains("Working with cAGENTS"), "Should have cAGENTS footer section");
-    assert!(content.contains("cagents build"), "Should mention cagents build command");
-    assert!(content.contains("cagents context"), "Should mention cagents context command");
+    // Verify header exists (footer removed)
+    assert!(content.contains("**IMPORTANT**: This project uses **cAGENTS**"), "Should have cAGENTS header");
+    assert!(content.contains("This file is auto-generated. Do not edit it directly."), "Should have warning");
 }
 
 #[test]
@@ -94,8 +93,7 @@ name: test
 
     std::env::set_current_dir(original).unwrap();
 
-    // Verify footer exists
-    assert!(content.contains("Working with cAGENTS"), "Should have cAGENTS footer section");
-    assert!(content.contains("cagents build"), "Should mention cagents build command");
-    assert!(content.contains("cagents context"), "Should mention cagents context command");
+    // Verify header exists (footer removed)
+    assert!(content.contains("**IMPORTANT**: This project uses **cAGENTS**"), "Should have cAGENTS header");
+    assert!(content.contains("This file is auto-generated. Do not edit it directly."), "Should have warning");
 }

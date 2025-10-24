@@ -569,6 +569,19 @@ project = "imported-from-claude-md"
     Ok(())
 }
 
+/// Escape special glob characters in a path for use in YAML frontmatter
+/// Glob special characters (* ? [ ] { }) need to be escaped with backslash for glob matching
+/// In YAML double-quoted strings, backslashes must be doubled (\\) to produce a literal backslash
+fn escape_glob_chars(s: &str) -> String {
+    s.chars()
+        .flat_map(|c| match c {
+            // Double backslash for YAML, so "\[" becomes "\\[" in the string
+            '*' | '?' | '[' | ']' | '{' | '}' => vec!['\\', '\\', c],
+            _ => vec![c],
+        })
+        .collect()
+}
+
 /// Generate glob pattern and outputIn for a file location
 /// Returns (globs_line, output_in_line) for frontmatter
 fn generate_glob_and_output(location: &PathBuf) -> (String, String) {
@@ -580,7 +593,9 @@ fn generate_glob_and_output(location: &PathBuf) -> (String, String) {
         // This matches the directory itself, not files within it
         // Always use forward slashes in globs regardless of OS
         let parent_str = parent.to_string_lossy().replace('\\', "/");
-        let glob = format!("globs: [\"{}/\"]", parent_str);
+        // Escape special glob characters like [], *, ?, {}, etc.
+        let escaped_parent = escape_glob_chars(&parent_str);
+        let glob = format!("globs: [\"{}/\"]", escaped_parent);
         let output_in = "outputIn: \"matched\"".to_string();
         (glob, output_in)
     } else {
@@ -1042,4 +1057,63 @@ fn find_all_files_named(filename: &str) -> Vec<PathBuf> {
     }
 
     locations
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_escape_glob_chars_brackets() {
+        // Double backslash for YAML escaping
+        assert_eq!(escape_glob_chars("[id]"), r"\\[id\\]");
+        assert_eq!(escape_glob_chars("path/[orgSlug]/settings"), r"path/\\[orgSlug\\]/settings");
+    }
+
+    #[test]
+    fn test_escape_glob_chars_asterisk() {
+        assert_eq!(escape_glob_chars("test*case"), r"test\\*case");
+        assert_eq!(escape_glob_chars("**/*.md"), r"\\*\\*/\\*.md");
+    }
+
+    #[test]
+    fn test_escape_glob_chars_question() {
+        assert_eq!(escape_glob_chars("test?file"), r"test\\?file");
+    }
+
+    #[test]
+    fn test_escape_glob_chars_braces() {
+        assert_eq!(escape_glob_chars("{a,b}"), r"\\{a,b\\}");
+    }
+
+    #[test]
+    fn test_escape_glob_chars_mixed() {
+        assert_eq!(
+            escape_glob_chars("path/[id]/test*case/{a,b}"),
+            r"path/\\[id\\]/test\\*case/\\{a,b\\}"
+        );
+    }
+
+    #[test]
+    fn test_escape_glob_chars_normal_path() {
+        // Normal paths without special chars should be unchanged
+        assert_eq!(escape_glob_chars("src/pages/dashboard"), "src/pages/dashboard");
+    }
+
+    #[test]
+    fn test_generate_glob_and_output_with_brackets() {
+        let location = PathBuf::from("src/pages/[id]/AGENTS.md");
+        let (globs_line, output_in_line) = generate_glob_and_output(&location);
+        // Double backslash in the string for YAML
+        assert_eq!(globs_line, r#"globs: ["src/pages/\\[id\\]/"]"#);
+        assert_eq!(output_in_line, r#"outputIn: "matched""#);
+    }
+
+    #[test]
+    fn test_generate_glob_and_output_root() {
+        let location = PathBuf::from("AGENTS.md");
+        let (globs_line, output_in_line) = generate_glob_and_output(&location);
+        assert_eq!(globs_line, "");
+        assert_eq!(output_in_line, "");
+    }
 }

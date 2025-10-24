@@ -578,7 +578,8 @@ fn generate_glob_and_output(location: &PathBuf) -> (String, String) {
     } else if let Some(parent) = location.parent() {
         // Nested file - create directory glob with trailing slash for matched output
         // This matches the directory itself, not files within it
-        let parent_str = parent.to_string_lossy();
+        // Always use forward slashes in globs regardless of OS
+        let parent_str = parent.to_string_lossy().replace('\\', "/");
         let glob = format!("globs: [\"{}/\"]", parent_str);
         let output_in = "outputIn: \"matched\"".to_string();
         (glob, output_in)

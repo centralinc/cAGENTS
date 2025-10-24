@@ -389,14 +389,21 @@ project = "imported-from-agents-md"
                 .unwrap_or_else(|| format!("agents-{}", idx))
         };
 
+        // Generate glob and outputIn for nested files
+        let (globs_line, output_in_line) = generate_glob_and_output(location);
+
+        // Build frontmatter
+        let mut frontmatter = format!("name: {}\ndescription: Imported from {}", template_name, location.display());
+        if !globs_line.is_empty() {
+            frontmatter.push_str(&format!("\n{}", globs_line));
+        }
+        if !output_in_line.is_empty() {
+            frontmatter.push_str(&format!("\n{}", output_in_line));
+        }
+        frontmatter.push_str(&format!("\norder: {}", (idx + 1) * 10));
+
         // Create template
-        let template = format!(
-            "---\nname: {}\ndescription: Imported from {}\norder: {}\n---\n{}",
-            template_name,
-            location.display(),
-            (idx + 1) * 10,
-            content
-        );
+        let template = format!("---\n{}\n---\n{}", frontmatter, content);
 
         let template_filename = format!("{}.md", template_name);
         fs::write(templates_dir.join(&template_filename), template)?;
@@ -505,14 +512,21 @@ project = "imported-from-claude-md"
                 .unwrap_or_else(|| format!("agents-{}", idx))
         };
 
+        // Generate glob and outputIn for nested files
+        let (globs_line, output_in_line) = generate_glob_and_output(location);
+
+        // Build frontmatter
+        let mut frontmatter = format!("name: {}\ndescription: Imported from {}", template_name, location.display());
+        if !globs_line.is_empty() {
+            frontmatter.push_str(&format!("\n{}", globs_line));
+        }
+        if !output_in_line.is_empty() {
+            frontmatter.push_str(&format!("\n{}", output_in_line));
+        }
+        frontmatter.push_str(&format!("\norder: {}", (idx + 1) * 10));
+
         // Create template
-        let template = format!(
-            "---\nname: {}\ndescription: Imported from {}\norder: {}\n---\n{}",
-            template_name,
-            location.display(),
-            (idx + 1) * 10,
-            content
-        );
+        let template = format!("---\n{}\n---\n{}", frontmatter, content);
 
         let template_filename = format!("{}.md", template_name);
         fs::write(templates_dir.join(&template_filename), template)?;
@@ -555,18 +569,24 @@ project = "imported-from-claude-md"
     Ok(())
 }
 
-/// Helper function to merge content from nested files with a given filename
-fn merge_nested_files(filename: &str) -> Result<(String, Vec<PathBuf>)> {
-    let mut combined = String::new();
-    let locations = find_all_files_named(filename);
-
-    for location in &locations {
-        let file_content = fs::read_to_string(location)?;
-        combined.push_str(&file_content);
-        combined.push_str("\n\n");
+/// Generate glob pattern and outputIn for a file location
+/// Returns (globs_line, output_in_line) for frontmatter
+fn generate_glob_and_output(location: &PathBuf) -> (String, String) {
+    if location == &PathBuf::from("AGENTS.md") || location == &PathBuf::from("CLAUDE.md") || location == &PathBuf::from(".cursorrules") {
+        // Root-level file - no glob needed, outputs to root
+        (String::new(), String::new())
+    } else if let Some(parent) = location.parent() {
+        // Nested file - create directory glob with trailing slash for matched output
+        // This matches the directory itself, not files within it
+        // Always use forward slashes in globs regardless of OS
+        let parent_str = parent.to_string_lossy().replace('\\', "/");
+        let glob = format!("globs: [\"{}/\"]", parent_str);
+        let output_in = "outputIn: \"matched\"".to_string();
+        (glob, output_in)
+    } else {
+        // Fallback to root
+        (String::new(), String::new())
     }
-
-    Ok((combined, locations))
 }
 
 /// Import and merge multiple formats into separate templates
@@ -634,13 +654,29 @@ project = "imported-merged"
     use std::collections::HashMap;
     let mut cached_file_lists: HashMap<String, Vec<PathBuf>> = HashMap::new();
 
-    // Import each format as a separate template
+    // Import each format - create separate templates for each nested file
     let mut imported_count = 0;
-    for (idx, format) in formats.iter().enumerate() {
-        let content = match format {
+    let mut template_order = 10;
+
+    for format in formats.iter() {
+        match format {
             ImportFormat::CursorLegacy => {
                 let path = format.file_path();
-                fs::read_to_string(&path)?
+                let content = fs::read_to_string(&path)?;
+
+                let template = format!(r#"---
+name: agents-cursor
+description: Imported from {}
+when:
+  target: ["agents-md", "cursorrules"]
+order: {}
+---
+{}
+"#, format.display_name(), template_order, content);
+
+                fs::write(templates_dir.join("agents-cursor.md"), template)?;
+                template_order += 10;
+                imported_count += 1;
             }
             ImportFormat::CursorModern => {
                 // For modern cursor, concatenate all files (recursively)
@@ -652,45 +688,104 @@ project = "imported-merged"
                     combined.push_str(&file_content);
                     combined.push_str("\n\n");
                 }
-                combined
-            }
-            ImportFormat::AgentsMd => {
-                let (content, locations) = merge_nested_files("AGENTS.md")?;
-                cached_file_lists.insert("AGENTS.md".to_string(), locations);
-                content
-            }
-            ImportFormat::ClaudeMd => {
-                let (content, locations) = merge_nested_files("CLAUDE.md")?;
-                cached_file_lists.insert("CLAUDE.md".to_string(), locations);
-                content
-            }
-        };
 
-        // Create template with unique name and target filter
-        let (template_name, target_filter) = match format {
-            ImportFormat::CursorLegacy | ImportFormat::CursorModern => {
-                ("agents-cursor", "when:\n  target: [\"agents-md\", \"cursorrules\"]")
-            }
-            ImportFormat::AgentsMd => {
-                ("agents-from-agentsmd", "when:\n  target: [\"agents-md\"]")
-            }
-            ImportFormat::ClaudeMd => {
-                ("agents-from-claudemd", "when:\n  target: [\"claude-md\"]")
-            }
-        };
-
-        let template = format!(r#"---
-name: {}
+                let template = format!(r#"---
+name: agents-cursor-modern
 description: Imported from {}
-{}
+when:
+  target: ["agents-md", "cursorrules"]
 order: {}
 ---
 {}
-"#, template_name, format.display_name(), target_filter, (idx + 1) * 10, content);
+"#, format.display_name(), template_order, combined);
 
-        fs::write(templates_dir.join(format!("{}.md", template_name)), template)?;
+                fs::write(templates_dir.join("agents-cursor-modern.md"), template)?;
+                template_order += 10;
+                imported_count += 1;
+            }
+            ImportFormat::AgentsMd => {
+                // Find ALL AGENTS.md files and create separate templates for each
+                let locations = find_all_files_named("AGENTS.md");
+                cached_file_lists.insert("AGENTS.md".to_string(), locations.clone());
 
-        imported_count += 1;
+                for (idx, location) in locations.iter().enumerate() {
+                    let content = fs::read_to_string(location)?;
+
+                    // Generate template name
+                    let template_name = if location == &PathBuf::from("AGENTS.md") {
+                        "agents-root".to_string()
+                    } else {
+                        location
+                            .parent()
+                            .and_then(|p| p.file_name())
+                            .and_then(|n| n.to_str())
+                            .map(|s| format!("agents-{}", s))
+                            .unwrap_or_else(|| format!("agents-{}", idx))
+                    };
+
+                    // Generate glob and outputIn
+                    let (globs_line, output_in_line) = generate_glob_and_output(location);
+
+                    // Build frontmatter
+                    let mut frontmatter = format!("name: {}\ndescription: Imported from {}", template_name, location.display());
+                    if !globs_line.is_empty() {
+                        frontmatter.push_str(&format!("\n{}", globs_line));
+                    }
+                    if !output_in_line.is_empty() {
+                        frontmatter.push_str(&format!("\n{}", output_in_line));
+                    }
+                    frontmatter.push_str("\nwhen:\n  target: [\"agents-md\"]");
+                    frontmatter.push_str(&format!("\norder: {}", template_order));
+
+                    let template = format!("---\n{}\n---\n{}", frontmatter, content);
+                    fs::write(templates_dir.join(format!("{}.md", template_name)), template)?;
+
+                    template_order += 10;
+                    imported_count += 1;
+                }
+            }
+            ImportFormat::ClaudeMd => {
+                // Find ALL CLAUDE.md files and create separate templates for each
+                let locations = find_all_files_named("CLAUDE.md");
+                cached_file_lists.insert("CLAUDE.md".to_string(), locations.clone());
+
+                for (idx, location) in locations.iter().enumerate() {
+                    let content = fs::read_to_string(location)?;
+
+                    // Generate template name
+                    let template_name = if location == &PathBuf::from("CLAUDE.md") {
+                        "claude-root".to_string()
+                    } else {
+                        location
+                            .parent()
+                            .and_then(|p| p.file_name())
+                            .and_then(|n| n.to_str())
+                            .map(|s| format!("claude-{}", s))
+                            .unwrap_or_else(|| format!("claude-{}", idx))
+                    };
+
+                    // Generate glob and outputIn
+                    let (globs_line, output_in_line) = generate_glob_and_output(location);
+
+                    // Build frontmatter
+                    let mut frontmatter = format!("name: {}\ndescription: Imported from {}", template_name, location.display());
+                    if !globs_line.is_empty() {
+                        frontmatter.push_str(&format!("\n{}", globs_line));
+                    }
+                    if !output_in_line.is_empty() {
+                        frontmatter.push_str(&format!("\n{}", output_in_line));
+                    }
+                    frontmatter.push_str("\nwhen:\n  target: [\"claude-md\"]");
+                    frontmatter.push_str(&format!("\norder: {}", template_order));
+
+                    let template = format!("---\n{}\n---\n{}", frontmatter, content);
+                    fs::write(templates_dir.join(format!("{}.md", template_name)), template)?;
+
+                    template_order += 10;
+                    imported_count += 1;
+                }
+            }
+        }
     }
 
     fs::write(cagents_dir.join(".gitignore"), "config.local.toml\n**.local.*\n.output-cache\n")?;

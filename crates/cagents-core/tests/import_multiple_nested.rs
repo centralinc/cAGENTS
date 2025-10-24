@@ -40,45 +40,49 @@ fn test_import_multiple_formats_finds_nested_files() {
     assert!(temp.child(".cAGENTS/config.toml").exists());
     assert!(temp.child(".cAGENTS/templates").exists());
 
-    // Read the generated templates
-    let agents_template = std::fs::read_to_string(
-        temp.child(".cAGENTS/templates/agents-from-agentsmd.md").path()
+    // Verify separate templates were created for each nested file
+
+    // Check AGENTS.md templates
+    let agents_root = std::fs::read_to_string(
+        temp.child(".cAGENTS/templates/agents-root.md").path()
     ).unwrap();
+    assert!(agents_root.contains("Root level agents"));
+    assert!(!agents_root.contains("globs:"), "Root template should not have globs");
 
-    let claude_template = std::fs::read_to_string(
-        temp.child(".cAGENTS/templates/agents-from-claudemd.md").path()
+    let agents_api = std::fs::read_to_string(
+        temp.child(".cAGENTS/templates/agents-api.md").path()
     ).unwrap();
+    assert!(agents_api.contains("API level agents"));
+    assert!(agents_api.contains("globs: [\"src/api/\"]"), "Nested template should have directory glob");
+    assert!(agents_api.contains("outputIn: \"matched\""), "Nested template should have outputIn: matched");
 
-    // BUG: Currently these only contain root-level content
-    // After fix, they should contain ALL nested content
+    let agents_client = std::fs::read_to_string(
+        temp.child(".cAGENTS/templates/agents-client.md").path()
+    ).unwrap();
+    assert!(agents_client.contains("Client level agents"));
+    assert!(agents_client.contains("globs: [\"src/client/\"]"));
+    assert!(agents_client.contains("outputIn: \"matched\""));
 
-    // Verify AGENTS template contains content from all AGENTS.md files
-    assert!(
-        agents_template.contains("Root level agents"),
-        "Should contain root AGENTS.md content"
-    );
-    assert!(
-        agents_template.contains("API level agents"),
-        "Should contain nested src/api/AGENTS.md content"
-    );
-    assert!(
-        agents_template.contains("Client level agents"),
-        "Should contain nested src/client/AGENTS.md content"
-    );
+    // Check CLAUDE.md templates
+    let claude_root = std::fs::read_to_string(
+        temp.child(".cAGENTS/templates/claude-root.md").path()
+    ).unwrap();
+    assert!(claude_root.contains("Root level claude"));
+    assert!(!claude_root.contains("globs:"));
 
-    // Verify CLAUDE template contains content from all CLAUDE.md files
-    assert!(
-        claude_template.contains("Root level claude"),
-        "Should contain root CLAUDE.md content"
-    );
-    assert!(
-        claude_template.contains("API level claude"),
-        "Should contain nested src/api/CLAUDE.md content"
-    );
-    assert!(
-        claude_template.contains("Client level claude"),
-        "Should contain nested src/client/CLAUDE.md content"
-    );
+    let claude_api = std::fs::read_to_string(
+        temp.child(".cAGENTS/templates/claude-api.md").path()
+    ).unwrap();
+    assert!(claude_api.contains("API level claude"));
+    assert!(claude_api.contains("globs: [\"src/api/\"]"));
+    assert!(claude_api.contains("outputIn: \"matched\""));
+
+    let claude_client = std::fs::read_to_string(
+        temp.child(".cAGENTS/templates/claude-client.md").path()
+    ).unwrap();
+    assert!(claude_client.contains("Client level claude"));
+    assert!(claude_client.contains("globs: [\"src/client/\"]"));
+    assert!(claude_client.contains("outputIn: \"matched\""));
 }
 
 #[test]
@@ -103,16 +107,18 @@ fn test_import_multiple_formats_respects_gitignore() {
 
     env::set_current_dir(&original_dir).unwrap();
 
-    let template = std::fs::read_to_string(
-        temp.child(".cAGENTS/templates/agents-from-agentsmd.md").path()
+    // Check that separate templates were created for non-ignored files
+    let agents_root = std::fs::read_to_string(
+        temp.child(".cAGENTS/templates/agents-root.md").path()
     ).unwrap();
+    assert!(agents_root.contains("Root AGENTS"));
 
-    // Should contain non-ignored files
-    assert!(template.contains("Root AGENTS"));
-    assert!(template.contains("Src AGENTS"));
+    let agents_src = std::fs::read_to_string(
+        temp.child(".cAGENTS/templates/agents-src.md").path()
+    ).unwrap();
+    assert!(agents_src.contains("Src AGENTS"));
 
-    // Should NOT contain ignored files
-    assert!(!template.contains("Node AGENTS"));
-    assert!(!template.contains("Git AGENTS"));
-    assert!(!template.contains("Target AGENTS"));
+    // Verify ignored files were NOT imported as templates
+    assert!(!temp.child(".cAGENTS/templates/agents-node_modules.md").exists());
+    assert!(!temp.child(".cAGENTS/templates/agents-target.md").exists());
 }

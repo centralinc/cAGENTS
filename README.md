@@ -190,10 +190,10 @@ git commit -m "chore: remove generated files, now built via cagents"
 
 ### Result
 
-✅ **Templates** are version controlled (`.cAGENTS/templates/`)
-✅ **Generated files** are rebuilt on every `npm install`
-✅ **Context** is always fresh and environment-specific
-✅ **No merge conflicts** on generated files
+- ✅ **Templates** are version controlled (`.cAGENTS/templates/`)
+- ✅ **Generated files** are rebuilt on every `npm install`
+- ✅ **Context** is always fresh and environment-specific
+- ✅ **No merge conflicts** on generated files
 
 ---
 
@@ -248,7 +248,3 @@ Every developer and AI sees the same rules, regardless of:
 MIT
 
 ---
-
-**Built for the age of AI-assisted coding.**
-
-Give your agents the context they need, when they need it.

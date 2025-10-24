@@ -31,18 +31,18 @@ name: main
     // Run build
     cagents_core::cmd_build(None, false).unwrap();
 
-    // Check AGENTS.md has the update comment
+    // Check AGENTS.md has the auto-generated header
     let agents_content = fs::read_to_string("AGENTS.md").unwrap();
 
-    assert!(agents_content.contains("cagents build"),
-        "Should contain instruction to run 'cagents build'");
-    assert!(agents_content.contains("cagents context"),
-        "Should contain instruction about 'cagents context <filename>'");
+    assert!(agents_content.contains("**IMPORTANT**: This project uses **cAGENTS**"),
+        "Should contain cAGENTS notice");
+    assert!(agents_content.contains("This file is auto-generated. Do not edit it directly."),
+        "Should contain warning about editing");
 
-    // Comment should be at the top
-    let first_lines = agents_content.lines().take(10).collect::<Vec<_>>().join("\n");
-    assert!(first_lines.contains("cagents build"),
-        "Update comment should be near the top of the file");
+    // Header should be at the top
+    let first_lines = agents_content.lines().take(5).collect::<Vec<_>>().join("\n");
+    assert!(first_lines.contains("**IMPORTANT**"),
+        "Header should be at the top of the file");
 }
 
 #[test]
@@ -74,13 +74,13 @@ name: main
     // Run build
     cagents_core::cmd_build(None, false).unwrap();
 
-    // Check CLAUDE.md has the update comment
+    // Check CLAUDE.md has the auto-generated header
     let claude_content = fs::read_to_string("CLAUDE.md").unwrap();
 
-    assert!(claude_content.contains("cagents build"),
-        "CLAUDE.md should contain instruction to run 'cagents build'");
-    assert!(claude_content.contains("cagents context"),
-        "CLAUDE.md should contain instruction about 'cagents context <filename>'");
+    assert!(claude_content.contains("**IMPORTANT**: This project uses **cAGENTS**"),
+        "CLAUDE.md should contain cAGENTS notice");
+    assert!(claude_content.contains("This file is auto-generated. Do not edit it directly."),
+        "CLAUDE.md should contain warning about editing");
 }
 
 #[test]
@@ -112,13 +112,13 @@ name: main
     // Run build
     cagents_core::cmd_build(None, false).unwrap();
 
-    // Check .cursorrules has the update comment
+    // Check .cursorrules has the auto-generated header
     let cursor_content = fs::read_to_string(".cursorrules").unwrap();
 
-    assert!(cursor_content.contains("cagents build"),
-        ".cursorrules should contain instruction to run 'cagents build'");
-    assert!(cursor_content.contains("cagents context"),
-        ".cursorrules should contain instruction about 'cagents context <filename>'");
+    assert!(cursor_content.contains("IMPORTANT: This project uses cAGENTS"),
+        ".cursorrules should contain cAGENTS notice");
+    assert!(cursor_content.contains("This file is auto-generated. Do not edit it directly."),
+        ".cursorrules should contain warning about editing");
 }
 
 /// Helper to change directory and restore on drop

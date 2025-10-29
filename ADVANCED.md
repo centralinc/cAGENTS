@@ -965,6 +965,37 @@ A: Yes! Set `CAGENTS_TEST=1` environment variable to disable interactive prompts
 
 ---
 
+## RFCs and Roadmap
+
+### RFCs (Request for Comments)
+
+Major features and architectural changes are documented as RFCs in `docs/rfcs/`. Each RFC includes:
+- Detailed technical design
+- Implementation plan with phases
+- Testing strategy
+- Examples and documentation impact
+
+The RFC process follows industry best practices (inspired by Rust, React) with additional detail for AI-first development.
+
+**Current Active RFCs:**
+
+- **[RFC 0001: Claude Skills Support](./docs/rfcs/0001-claude-skills-support.md)** - Generate Claude Skills for dynamic on-demand instruction loading
+- **[RFC 0002: Progressive Disclosure](./docs/rfcs/0002-progressive-disclosure.md)** - Structure outputs to reduce context overload (core vs. additional sections)
+- **[RFC 0003: Multi-Format Consistency](./docs/rfcs/0003-multi-format-consistency.md)** - Adopt AGENTS.md as primary standard with CLAUDE.md compatibility
+- **[RFC 0004: CLI Enhancements](./docs/rfcs/0004-cli-enhancements.md)** - Add `context` command, enhance `render`, improve performance
+
+See [docs/rfcs/README.md](./docs/rfcs/README.md) for the complete RFC index and process.
+
+### How to Contribute RFCs
+
+1. Review existing RFCs in `docs/rfcs/`
+2. Use `docs/rfcs/0000-template.md` for new RFCs
+3. Submit RFC as a Pull Request (not the implementation)
+4. Discuss in PR comments until consensus
+5. Once merged, RFC is accepted and guides implementation
+
+---
+
 ## Contributing
 
 See [CONTRIBUTING.md](./CONTRIBUTING.md) for development setup and guidelines.

@@ -243,6 +243,29 @@ Every developer and AI sees the same rules, regardless of:
 
 ---
 
+## Development & RFCs
+
+### RFCs (Request for Comments)
+
+Major features are designed through RFCs in `docs/rfcs/`. Current RFCs for v0.2.0:
+
+- **[RFC 0001: Claude Skills Support](./docs/rfcs/0001-claude-skills-support.md)** - Generate dynamic skill files for Claude's on-demand loading
+- **[RFC 0002: Progressive Disclosure](./docs/rfcs/0002-progressive-disclosure.md)** - Reduce context overload with structured outputs
+- **[RFC 0003: Multi-Format Consistency](./docs/rfcs/0003-multi-format-consistency.md)** - Adopt AGENTS.md as primary standard
+- **[RFC 0004: CLI Enhancements](./docs/rfcs/0004-cli-enhancements.md)** - New `context` command, improved `render`, caching
+
+See [docs/rfcs/README.md](./docs/rfcs/README.md) for the RFC process and how to propose features.
+
+### Contributing
+
+Interested in contributing?
+
+1. Review RFCs in `docs/rfcs/`
+2. Follow TDD workflow (test first, then implement)
+3. See [CLAUDE.md](./CLAUDE.md) for full development guidelines
+
+---
+
 ## License
 
 MIT

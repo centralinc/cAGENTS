@@ -2,7 +2,7 @@
 name = "cagents-core"
 version.workspace = true
 edition = "2021"
-description = "Core library for cAGENTS - AGENTS.md generator with BYOC (Bring-Your-Own-Compiler) support"
+description = "Core library for cAGENTS - Adaptable instruction for codegen models with composable templates"
 license = "MIT"
 repository = "https://github.com/centralinc/cagents"
 homepage = "https://github.com/centralinc/cagents"

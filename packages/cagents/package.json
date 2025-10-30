@@ -1,7 +1,7 @@
 {
   "name": "cagents",
   "version": "0.5.1",
-  "description": "cAGENTS - collected, composed, and compiled AGENTS.md",
+  "description": "Adaptable instruction for codegen models. Generate AGENTS.md, CLAUDE.md, and tool-specific rules from composable templates.",
   "repository": {
     "url": "git+https://github.com/centralinc/cAGENTS.git"
   },
@@ -37,15 +37,20 @@
   "keywords": [
     "agents",
     "ai",
+    "claude",
     "cursor",
-    "rules",
+    "cline",
+    "windsurf",
+    "codex",
+    "aider",
+    "agents-md",
+    "claude-md",
     "code-generation",
     "templates",
-    "handlebars",
-    "liquid",
-    "tera",
-    "markdown",
-    "generators"
+    "ai-context",
+    "coding-assistant",
+    "instruction",
+    "markdown"
   ],
   "license": "MIT"
 }

@@ -1,9 +1,10 @@
 # cAGENTS
 
-**Compose AI coding rules from templates. Generate `AGENTS.md`, `CLAUDE.md`, and Cursor rules from a single source.**
+**Adaptable instruction for codegen models across humans and their machines.**
 
-Stop maintaining multiple static instruction files. Write small, focused templates that compose into context-aware rules for any AI coding tool.
-Useful for monorepos, defining personal agent instructions, and defining cloud agent rules vs local agent rules.
+Generate `AGENTS.md`, `CLAUDE.md`, and tool-specific rules from composable templates. Context-aware, scope-sensitive, DRY.
+
+Inspired by the `AGENTS.md` and `CLAUDE.md` conventions, cAGENTS makes instruction files adapt to your codebase structure—supporting Claude Code, Cursor, Cline, Windsurf, Codex, Aider, and any tool that reads these formats.
 
 ```
 ⚠️ Software in Alpha - Core features work, but expect rough edges and breaking changes.
@@ -96,9 +97,9 @@ Use strict mode. Prefer functional components.
 ```yaml
 ---
 when:
-  env: ["production"]      # Environment-specific
   language: ["typescript"]  # Language-specific
-  use_beads: "true"        # Tool availability
+  role: ["backend"]         # Role-specific
+  use_beads: "true"         # Tool availability
 ---
 ```
 
@@ -226,20 +227,31 @@ See [COMMANDS.md](./COMMANDS.md) for full reference.
 
 ## Why?
 
-**Problem:** Static `AGENTS.md` files can't adapt to context.
+### The Problem: Static Instruction Files Don't Scale
+
+The `AGENTS.md` and `CLAUDE.md` conventions solved a real problem—giving AI coding assistants project-specific context. But static files have limits:
+
+- **Global rules apply everywhere**, even when irrelevant
+- **Manual context doesn't scale** across monorepos or complex codebases
+- **Duplication is required** for similar-but-different rules across directories
+- **No adaptation** based on file type, role, or available tools
 
 Every developer and AI sees the same rules, regardless of:
-- Environment (local vs cloud vs production)
-- Tools available (linters, issue trackers)
-- Project area (frontend vs backend vs infra)
+- Tools available (linters, issue trackers, formatters)
+- Project area (frontend vs backend vs infrastructure)
+- File type (TypeScript vs Rust vs Python)
 
-**Solution:** Compose from templates. Generate context-aware output.
+### The Solution: Adaptable Instruction
 
-**Benefits:**
-- **DRY** - Write once, use everywhere
-- **Context-aware** - Different rules for different contexts
+cAGENTS treats instruction as **composable infrastructure**:
+
+- **Scope-sensitive** - Different rules for different files/directories
+- **Template-driven** - DRY, composable, maintainable
 - **Multi-format** - AGENTS.md, CLAUDE.md, .cursorrules from one source
+- **Cross-tool** - Works with any tool reading these conventions (Claude Code, Cursor, Cline, Windsurf, Codex, Aider)
 - **Monorepo-friendly** - Per-package rules without duplication
+
+Like "Infrastructure as Code" but for AI instruction—**"Instruction as Code"**.
 
 ---
 

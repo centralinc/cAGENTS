@@ -2,7 +2,7 @@
 name = "cagents"
 version.workspace = true
 edition = "2021"
-description = "CLI for cAGENTS - AGENTS.md generator with BYOC (Bring-Your-Own-Compiler) support"
+description = "CLI for cAGENTS - Adaptable instruction for codegen models with composable templates"
 license = "MIT"
 repository = "https://github.com/centralinc/cagents"
 homepage = "https://github.com/centralinc/cagents"

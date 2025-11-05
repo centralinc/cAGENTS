@@ -12,6 +12,31 @@ pub struct ProjectConfig {
     pub output: Option<Output>,
 }
 
+/// Partial config that can be loaded from individual config files
+/// All fields are optional to allow partial configs (e.g., local overrides)
+#[derive(Debug, Clone, Deserialize, Serialize, Default)]
+#[serde(deny_unknown_fields)]
+pub struct PartialProjectConfig {
+    pub project: Option<ProjectMeta>,
+    pub paths: Option<PartialPaths>,
+    pub defaults: Option<Defaults>,
+    pub variables: Option<Variables>,
+    pub execution: Option<Execution>,
+    pub output: Option<Output>,
+}
+
+/// Partial paths - all fields optional for partial configs
+#[derive(Debug, Clone, Deserialize, Serialize, Default)]
+#[serde(deny_unknown_fields)]
+pub struct PartialPaths {
+    #[serde(rename = "templatesDir")]
+    pub templates_dir: Option<String>,
+    #[serde(rename = "outputRoot")]
+    pub output_root: Option<String>,
+    #[serde(rename = "cursorRulesDir")]
+    pub cursor_rules_dir: Option<String>,
+}
+
 #[derive(Debug, Clone, Deserialize, Serialize)]
 #[serde(deny_unknown_fields)]
 pub struct ProjectMeta { pub name: Option<String> }

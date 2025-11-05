@@ -12,9 +12,8 @@ publish = false
 # Async runtime
 tokio = { version = "1.42", features = ["sync", "time", "rt"] }
 
-# Mixpanel client
-mixpanel-rs = "0.3"
-reqwest = { version = "0.12", features = ["json"] }
+# HTTP client (using rustls to avoid OpenSSL dependency issues on musl)
+reqwest = { version = "0.12", default-features = false, features = ["json", "rustls-tls"] }
 
 # Serialization
 serde = { version = "1.0", features = ["derive"] }

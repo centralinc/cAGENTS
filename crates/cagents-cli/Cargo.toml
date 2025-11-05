@@ -12,6 +12,10 @@ publish = false
 anyhow = "1"
 clap = { version = "4", features = ["derive"] }
 cagents-core = { path = "../cagents-core" }
+cagents-telemetry = { path = "../cagents-telemetry" }
+tokio = { version = "1", features = ["rt", "macros"] }
+uuid = { version = "1", features = ["v4"] }
+dirs = "5"
 
 [dev-dependencies]
 assert_cmd = "2"

@@ -179,12 +179,14 @@ fn get_or_create_session_id() -> String {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use serial_test::serial;
 
     #[test]
     fn test_llm_type_string() {
         assert_eq!(LLMType::ClaudeCode.as_str(), "claude_code");
         assert_eq!(LLMType::Cursor.as_str(), "cursor");
         assert_eq!(LLMType::Copilot.as_str(), "copilot");
+        assert_eq!(LLMType::Unknown.as_str(), "unknown");
     }
 
     #[test]
@@ -206,9 +208,152 @@ mod tests {
     }
 
     #[test]
+    #[serial]
     fn test_detect_llm_context_no_env() {
-        // Should return None when no LLM env vars are set
+        // Clean env
+        env::remove_var("CLAUDE_CODE_SESSION_ID");
+        env::remove_var("CURSOR_SESSION_ID");
+        env::remove_var("GITHUB_COPILOT_CHAT_SESSION_ID");
+
         let context = detect_llm_context();
         assert!(context.is_none());
+    }
+
+    #[test]
+    #[serial]
+    fn test_detect_claude_code() {
+        let original = env::var("CLAUDE_CODE_SESSION_ID").ok();
+        env::set_var("CLAUDE_CODE_SESSION_ID", "test-session");
+
+        let context = detect_llm_context();
+        assert!(context.is_some());
+
+        let ctx = context.unwrap();
+        assert_eq!(ctx.llm_type, LLMType::ClaudeCode);
+        assert!(!ctx.session_id.is_empty());
+
+        env::remove_var("CLAUDE_CODE_SESSION_ID");
+        if let Some(val) = original {
+            env::set_var("CLAUDE_CODE_SESSION_ID", val);
+        }
+    }
+
+    #[test]
+    #[serial]
+    fn test_detect_cursor() {
+        let original = env::var("CURSOR_SESSION_ID").ok();
+        env::set_var("CURSOR_SESSION_ID", "test-session");
+
+        let context = detect_llm_context();
+        assert!(context.is_some());
+
+        let ctx = context.unwrap();
+        assert_eq!(ctx.llm_type, LLMType::Cursor);
+
+        env::remove_var("CURSOR_SESSION_ID");
+        if let Some(val) = original {
+            env::set_var("CURSOR_SESSION_ID", val);
+        }
+    }
+
+    #[test]
+    #[serial]
+    fn test_detect_copilot() {
+        let original = env::var("GITHUB_COPILOT_CHAT_SESSION_ID").ok();
+        env::set_var("GITHUB_COPILOT_CHAT_SESSION_ID", "test-session");
+
+        let context = detect_llm_context();
+        assert!(context.is_some());
+
+        let ctx = context.unwrap();
+        assert_eq!(ctx.llm_type, LLMType::Copilot);
+
+        env::remove_var("GITHUB_COPILOT_CHAT_SESSION_ID");
+        if let Some(val) = original {
+            env::set_var("GITHUB_COPILOT_CHAT_SESSION_ID", val);
+        }
+    }
+
+    #[test]
+    fn test_session_increment_command_count() {
+        let mut session = LLMSession {
+            llm_session_id: "test".to_string(),
+            llm_type: "claude_code".to_string(),
+            started_at: Utc::now(),
+            command_count: 0,
+            last_command_at: Utc::now(),
+            had_error: false,
+            retry_count: 0,
+        };
+
+        assert_eq!(session.command_count, 0);
+
+        let _ = session.increment_command_count();
+        assert_eq!(session.command_count, 1);
+
+        let _ = session.increment_command_count();
+        assert_eq!(session.command_count, 2);
+    }
+
+    #[test]
+    fn test_session_mark_error() {
+        let mut session = LLMSession {
+            llm_session_id: "test".to_string(),
+            llm_type: "claude_code".to_string(),
+            started_at: Utc::now(),
+            command_count: 0,
+            last_command_at: Utc::now(),
+            had_error: false,
+            retry_count: 0,
+        };
+
+        assert!(!session.had_error);
+        assert_eq!(session.retry_count, 0);
+
+        let _ = session.mark_error();
+        assert!(session.had_error);
+        assert_eq!(session.retry_count, 1);
+
+        let _ = session.mark_error();
+        assert_eq!(session.retry_count, 2);
+    }
+
+    #[test]
+    fn test_session_elapsed_ms() {
+        let session = LLMSession {
+            llm_session_id: "test".to_string(),
+            llm_type: "claude_code".to_string(),
+            started_at: Utc::now() - Duration::milliseconds(5000),
+            command_count: 0,
+            last_command_at: Utc::now(),
+            had_error: false,
+            retry_count: 0,
+        };
+
+        let elapsed = session.elapsed_ms();
+        assert!(elapsed >= 5000);
+        assert!(elapsed < 6000); // Should be around 5 seconds
+    }
+
+    #[test]
+    fn test_session_serialization() {
+        let session = LLMSession {
+            llm_session_id: "test-id".to_string(),
+            llm_type: "cursor".to_string(),
+            started_at: Utc::now(),
+            command_count: 42,
+            last_command_at: Utc::now(),
+            had_error: true,
+            retry_count: 3,
+        };
+
+        let json = serde_json::to_string(&session).unwrap();
+        let deserialized: LLMSession = serde_json::from_str(&json).unwrap();
+
+        assert_eq!(deserialized.llm_session_id, "test-id");
+        assert_eq!(deserialized.llm_type, "cursor");
+        assert_eq!(deserialized.command_count, 42);
+        assert_eq!(deserialized.retry_count, 3);
+        assert!(deserialized.had_error);
     }
 }

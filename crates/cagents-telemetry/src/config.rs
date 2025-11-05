@@ -158,6 +158,9 @@ pub fn get_telemetry_dir() -> Result<PathBuf> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use serial_test::serial;
+    use std::fs;
+    use tempfile::TempDir;
 
     #[test]
     fn test_default_config() {
@@ -168,19 +171,178 @@ mod tests {
     }
 
     #[test]
+    #[serial]
     fn test_is_ci_detection() {
         // Save original env
-        let original = env::var("CI").ok();
+        let original_ci = env::var("CI").ok();
+        let original_github = env::var("GITHUB_ACTIONS").ok();
 
+        // Test CI detection
         env::set_var("CI", "true");
         assert!(is_ci());
-
         env::remove_var("CI");
+
+        env::set_var("GITHUB_ACTIONS", "true");
+        assert!(is_ci());
+        env::remove_var("GITHUB_ACTIONS");
+
+        env::set_var("GITLAB_CI", "true");
+        assert!(is_ci());
+        env::remove_var("GITLAB_CI");
+
         assert!(!is_ci());
 
         // Restore
-        if let Some(val) = original {
+        if let Some(val) = original_ci {
             env::set_var("CI", val);
         }
+        if let Some(val) = original_github {
+            env::set_var("GITHUB_ACTIONS", val);
+        }
+    }
+
+    #[test]
+    #[serial]
+    fn test_env_var_disables_telemetry() {
+        let original = env::var("CAGENTS_TELEMETRY_DISABLED").ok();
+
+        env::set_var("CAGENTS_TELEMETRY_DISABLED", "1");
+        let mut config = TelemetryConfig::default();
+        apply_env_overrides(&mut config).unwrap();
+        assert!(!config.enabled);
+
+        env::remove_var("CAGENTS_TELEMETRY_DISABLED");
+        if let Some(val) = original {
+            env::set_var("CAGENTS_TELEMETRY_DISABLED", val);
+        }
+    }
+
+    #[test]
+    #[serial]
+    fn test_do_not_track_disables_telemetry() {
+        let original = env::var("DO_NOT_TRACK").ok();
+
+        env::set_var("DO_NOT_TRACK", "1");
+        let mut config = TelemetryConfig::default();
+        apply_env_overrides(&mut config).unwrap();
+        assert!(!config.enabled);
+
+        env::remove_var("DO_NOT_TRACK");
+        if let Some(val) = original {
+            env::set_var("DO_NOT_TRACK", val);
+        }
+    }
+
+    #[test]
+    #[serial]
+    fn test_debug_mode_from_env() {
+        let original = env::var("CAGENTS_TELEMETRY_DEBUG").ok();
+
+        env::set_var("CAGENTS_TELEMETRY_DEBUG", "1");
+        let mut config = TelemetryConfig::default();
+        apply_env_overrides(&mut config).unwrap();
+        assert!(config.debug);
+
+        env::remove_var("CAGENTS_TELEMETRY_DEBUG");
+        if let Some(val) = original {
+            env::set_var("CAGENTS_TELEMETRY_DEBUG", val);
+        }
+    }
+
+    #[test]
+    #[serial]
+    fn test_ci_auto_disables_telemetry() {
+        let original_ci = env::var("CI").ok();
+        let original_telemetry = env::var("CAGENTS_TELEMETRY_IN_CI").ok();
+
+        env::set_var("CI", "true");
+        env::remove_var("CAGENTS_TELEMETRY_IN_CI");
+
+        let mut config = TelemetryConfig::default();
+        apply_env_overrides(&mut config).unwrap();
+        assert!(!config.enabled);
+
+        // Cleanup
+        env::remove_var("CI");
+        if let Some(val) = original_ci {
+            env::set_var("CI", val);
+        }
+        if let Some(val) = original_telemetry {
+            env::set_var("CAGENTS_TELEMETRY_IN_CI", val);
+        }
+    }
+
+    #[test]
+    #[serial]
+    fn test_config_merge() {
+        let mut base = TelemetryConfig {
+            enabled: true,
+            debug: false,
+            mixpanel_token: Some("base_token".to_string()),
+        };
+
+        let override_config = TelemetryConfig {
+            enabled: false,
+            debug: true,
+            mixpanel_token: Some("override_token".to_string()),
+        };
+
+        merge_config(&mut base, override_config);
+
+        assert!(!base.enabled); // Disabled
+        assert!(base.debug); // Debug enabled
+        assert_eq!(base.mixpanel_token, Some("override_token".to_string()));
+    }
+
+    #[test]
+    #[serial]
+    fn test_load_config_from_file_with_telemetry_section() {
+        let temp_dir = TempDir::new().unwrap();
+        let config_file = temp_dir.path().join("config.toml");
+
+        fs::write(
+            &config_file,
+            r#"
+[telemetry]
+enabled = false
+debug = true
+mixpanel_token = "test_token"
+"#,
+        )
+        .unwrap();
+
+        let config = load_config_from_file(&config_file).unwrap();
+        assert!(!config.enabled);
+        assert!(config.debug);
+        assert_eq!(config.mixpanel_token, Some("test_token".to_string()));
+    }
+
+    #[test]
+    #[serial]
+    fn test_load_config_from_file_without_telemetry_section() {
+        let temp_dir = TempDir::new().unwrap();
+        let config_file = temp_dir.path().join("config.toml");
+
+        fs::write(
+            &config_file,
+            r#"
+[paths]
+templatesDir = "templates"
+outputRoot = "."
+"#,
+        )
+        .unwrap();
+
+        let config = load_config_from_file(&config_file).unwrap();
+        // Should use defaults
+        assert!(config.enabled);
+        assert!(!config.debug);
+    }
+
+    #[test]
+    fn test_get_telemetry_dir_creates_directory() {
+        let dir = get_telemetry_dir().unwrap();
+        assert!(dir.exists());
+        assert!(dir.ends_with(".cagents/telemetry"));
     }
 }

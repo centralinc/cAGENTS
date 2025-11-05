@@ -18,7 +18,7 @@ pub struct CommandEvent {
     // Command info
     pub command: String, // "build" | "preview" | "init" | "render"
     pub subcommand: Option<String>,
-    #[serde(skip_serializing_if = "Vec::is_empty")]
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub flags: Vec<String>, // Sanitized flag names only
 
     // Execution metadata
@@ -275,6 +275,52 @@ mod tests {
         assert_eq!(event.event_type, "command_executed");
         assert!(event.success);
         assert_eq!(event.cli_version, "0.5.1");
+        assert_eq!(event.machine_id, "test_machine");
+        assert_eq!(event.session_id, "test_session");
+        assert_eq!(event.duration_ms, 0);
+        assert!(event.error_type.is_none());
+    }
+
+    #[test]
+    fn test_command_event_with_error() {
+        let mut event = CommandEvent::new(
+            "test_machine".to_string(),
+            "test_session".to_string(),
+            "build".to_string(),
+            "0.5.1".to_string(),
+        );
+
+        event.success = false;
+        event.error_type = Some("ConfigNotFound".to_string());
+        event.duration_ms = 150;
+
+        assert!(!event.success);
+        assert_eq!(event.error_type, Some("ConfigNotFound".to_string()));
+        assert_eq!(event.duration_ms, 150);
+    }
+
+    #[test]
+    fn test_command_event_with_llm_context() {
+        let mut event = CommandEvent::new(
+            "test_machine".to_string(),
+            "test_session".to_string(),
+            "preview".to_string(),
+            "0.5.1".to_string(),
+        );
+
+        event.llm_session = Some(LLMSessionContext {
+            llm_session_id: "llm-session-123".to_string(),
+            llm_type: "claude_code".to_string(),
+            command_index: 5,
+            time_since_session_start_ms: 30000,
+            had_error_in_session: false,
+            retry_count: 0,
+        });
+
+        assert!(event.llm_session.is_some());
+        let llm = event.llm_session.unwrap();
+        assert_eq!(llm.llm_type, "claude_code");
+        assert_eq!(llm.command_index, 5);
     }
 
     #[test]
@@ -290,5 +336,96 @@ mod tests {
         assert_eq!(event_name, "command_executed");
         assert!(properties.contains_key("command"));
         assert!(properties.contains_key("cli_version"));
+        assert!(properties.contains_key("os"));
+        assert!(properties.contains_key("arch"));
+        assert!(properties.contains_key("duration_ms"));
+        assert!(properties.contains_key("success"));
+    }
+
+    #[test]
+    fn test_mixpanel_conversion_with_llm() {
+        let mut event = CommandEvent::new(
+            "test_machine".to_string(),
+            "test_session".to_string(),
+            "build".to_string(),
+            "0.5.1".to_string(),
+        );
+
+        event.llm_session = Some(LLMSessionContext {
+            llm_session_id: "llm-123".to_string(),
+            llm_type: "cursor".to_string(),
+            command_index: 3,
+            time_since_session_start_ms: 15000,
+            had_error_in_session: false,
+            retry_count: 0,
+        });
+
+        let (event_name, properties) = event.to_mixpanel("test_machine");
+        assert_eq!(event_name, "command_executed");
+        assert!(properties.contains_key("llm_session_id"));
+        assert!(properties.contains_key("llm_type"));
+        assert!(properties.contains_key("llm_command_index"));
+
+        let llm_type = properties.get("llm_type").unwrap().as_str().unwrap();
+        assert_eq!(llm_type, "cursor");
+    }
+
+    #[test]
+    fn test_error_event_creation() {
+        let event = ErrorEvent::new(
+            "machine123".to_string(),
+            "session456".to_string(),
+            "TemplateNotFound".to_string(),
+            "template".to_string(),
+            "build".to_string(),
+        );
+
+        assert_eq!(event.event_type, "error");
+        assert_eq!(event.error_type, "TemplateNotFound");
+        assert_eq!(event.error_category, "template");
+        assert_eq!(event.command_context, "build");
+    }
+
+    #[test]
+    fn test_feature_event_creation() {
+        let event = FeatureEvent::new(
+            "machine123".to_string(),
+            "session456".to_string(),
+            "custom_engine".to_string(),
+            Some("python3".to_string()),
+        );
+
+        assert_eq!(event.event_type, "feature_used");
+        assert_eq!(event.feature, "custom_engine");
+        assert_eq!(event.value, Some("python3".to_string()));
+    }
+
+    #[test]
+    fn test_get_os_string() {
+        let os = get_os_string();
+        assert!(os == "linux" || os == "macos" || os == "windows" || os == "unknown");
+    }
+
+    #[test]
+    fn test_get_arch_string() {
+        let arch = get_arch_string();
+        assert!(arch == "x64" || arch == "arm64" || arch == "unknown");
+    }
+
+    #[test]
+    fn test_command_event_serialization() {
+        let event = CommandEvent::new(
+            "machine123".to_string(),
+            "session456".to_string(),
+            "lint".to_string(),
+            "0.5.1".to_string(),
+        );
+
+        let json = serde_json::to_string(&event).unwrap();
+        let deserialized: CommandEvent = serde_json::from_str(&json).unwrap();
+
+        assert_eq!(deserialized.command, "lint");
+        assert_eq!(deserialized.machine_id, "machine123");
+        assert_eq!(deserialized.cli_version, "0.5.1");
     }
 }

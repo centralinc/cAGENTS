@@ -476,8 +476,21 @@ pub fn cmd_preview(_path: &str) -> Result<()> {
         return Ok(());
     }
 
-    // Get build context
-    let context = planner::BuildContext::new(None, None, None);
+    // Build template data from config variables (same as build)
+    let base_data = build_template_data_map(&config);
+
+    // Build context from config variables (for use in when clauses)
+    let mut context_variables = std::collections::HashMap::new();
+
+    // Add config variables to context (for use in when clauses)
+    for (key, value) in &base_data {
+        if let Some(s) = value.as_str() {
+            context_variables.insert(key.clone(), s.to_string());
+        }
+    }
+
+    // Create context from variables
+    let context = planner::BuildContext::from_variables(context_variables);
 
     // Plan outputs
     let outputs = planner::plan_outputs(&all_rules, &context, &PathBuf::from("."))?;
@@ -490,8 +503,6 @@ pub fn cmd_preview(_path: &str) -> Result<()> {
     println!("{} {}", "✓".bright_green(), format!("{} file(s) will be generated:", outputs.len()).green().bold());
     println!();
 
-    // Load base data for rendering
-    let base_data = build_template_data_map(&config);
     let defaults = config.defaults.as_ref();
 
     // Show each output file

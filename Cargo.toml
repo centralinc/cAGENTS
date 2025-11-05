@@ -1,7 +1,8 @@
 [workspace]
 members = [
   "crates/cagents-core",
-  "crates/cagents-cli"
+  "crates/cagents-cli",
+  "crates/cagents-telemetry"
 ]
 resolver = "2"
 

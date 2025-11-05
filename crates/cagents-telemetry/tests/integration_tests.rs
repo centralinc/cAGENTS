@@ -1,6 +1,6 @@
 //! Integration tests for telemetry system
 
-use cagents_telemetry::{CommandEvent, TelemetryClient, TelemetryConfig};
+use cagents_telemetry::{CommandEvent, TelemetryClient};
 use serial_test::serial;
 use std::env;
 use std::fs;

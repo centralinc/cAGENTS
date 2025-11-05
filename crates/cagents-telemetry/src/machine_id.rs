@@ -62,10 +62,8 @@ fn generate_machine_id() -> Result<String> {
 /// Get a stable machine identifier (MAC address, hostname, or UUID fallback)
 fn get_machine_identifier() -> Result<String> {
     // Try MAC address first (most stable)
-    if let Ok(mac) = mac_address::get_mac_address() {
-        if let Some(mac_addr) = mac {
-            return Ok(mac_addr.to_string());
-        }
+    if let Ok(Some(mac_addr)) = mac_address::get_mac_address() {
+        return Ok(mac_addr.to_string());
     }
 
     // Fallback to hostname
@@ -109,7 +107,6 @@ fn get_or_create_salt() -> Result<String> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use tempfile::TempDir;
 
     #[test]
     fn test_machine_id_is_stable() {

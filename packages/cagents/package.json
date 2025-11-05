@@ -1,6 +1,6 @@
 {
   "name": "cagents",
-  "version": "0.5.1",
+  "version": "0.6.0",
   "description": "Adaptable instruction for codegen models. Generate AGENTS.md, CLAUDE.md, and tool-specific rules from composable templates.",
   "repository": {
     "url": "git+https://github.com/centralinc/cAGENTS.git"
